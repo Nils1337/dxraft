@@ -1,0 +1,161 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<diagram program="umlet" version="14.2">
+  <zoom_level>7</zoom_level>
+  <element>
+    <id>UMLClass</id>
+    <coordinates>
+      <x>210</x>
+      <y>14</y>
+      <w>259</w>
+      <h>252</h>
+    </coordinates>
+    <panel_attributes>RaftServer
+--
+state: {Follower, Candidate, Leader}
+currentTerm: int
+votedFor: serverId
+log: LogEntry[]
+
+commitIndex: int
+lastApplied: int
+nextIndex: int[]
+matchIndex: int[]
+
+timer: Timer
+
+--
+#processTimeout()
+#processVoteRequest(VoteRequest)
+#processAppendEntriesRequest(AppendEntriesRequest)
+#processClientRequest(ClientRequest)</panel_attributes>
+    <additional_attributes/>
+  </element>
+  <element>
+    <id>UMLClass</id>
+    <coordinates>
+      <x>210</x>
+      <y>392</y>
+      <w>175</w>
+      <h>98</h>
+    </coordinates>
+    <panel_attributes>AppendEntriesResponse
+--
+term: int
+success: boolean</panel_attributes>
+    <additional_attributes/>
+  </element>
+  <element>
+    <id>UMLClass</id>
+    <coordinates>
+      <x>14</x>
+      <y>392</y>
+      <w>175</w>
+      <h>98</h>
+    </coordinates>
+    <panel_attributes>VoteResponse
+--
+term: int
+voteGranted: boolean</panel_attributes>
+    <additional_attributes/>
+  </element>
+  <element>
+    <id>UMLClass</id>
+    <coordinates>
+      <x>14</x>
+      <y>280</y>
+      <w>175</w>
+      <h>98</h>
+    </coordinates>
+    <panel_attributes>VoteRequest
+--
+term: int
+candidateId: serverId
+lastLogIndex: int
+lastLogTerm: int</panel_attributes>
+    <additional_attributes/>
+  </element>
+  <element>
+    <id>UMLClass</id>
+    <coordinates>
+      <x>210</x>
+      <y>280</y>
+      <w>175</w>
+      <h>98</h>
+    </coordinates>
+    <panel_attributes>AppendEntriesRequest
+--
+term: int
+leaderId: serverId
+prevLogIndex: int
+prevLogTerm: int
+entries: LogEntry[]
+leaderCommit: int</panel_attributes>
+    <additional_attributes/>
+  </element>
+  <element>
+    <id>UMLClass</id>
+    <coordinates>
+      <x>14</x>
+      <y>63</y>
+      <w>175</w>
+      <h>42</h>
+    </coordinates>
+    <panel_attributes>LogEntry
+--
+command
+term: int</panel_attributes>
+    <additional_attributes/>
+  </element>
+  <element>
+    <id>UMLClass</id>
+    <coordinates>
+      <x>14</x>
+      <y>14</y>
+      <w>175</w>
+      <h>35</h>
+    </coordinates>
+    <panel_attributes>Timer
+--
+- time last message from leader</panel_attributes>
+    <additional_attributes/>
+  </element>
+  <element>
+    <id>UMLClass</id>
+    <coordinates>
+      <x>14</x>
+      <y>175</y>
+      <w>175</w>
+      <h>35</h>
+    </coordinates>
+    <panel_attributes>ClientRequest
+--
+command</panel_attributes>
+    <additional_attributes/>
+  </element>
+  <element>
+    <id>UMLClass</id>
+    <coordinates>
+      <x>14</x>
+      <y>224</y>
+      <w>175</w>
+      <h>35</h>
+    </coordinates>
+    <panel_attributes>ClientResponse
+--
+command</panel_attributes>
+    <additional_attributes/>
+  </element>
+  <element>
+    <id>UMLClass</id>
+    <coordinates>
+      <x>490</x>
+      <y>14</y>
+      <w>224</w>
+      <h>35</h>
+    </coordinates>
+    <panel_attributes>RaftClient
+--
+ - provide API for reading from and writing to raft</panel_attributes>
+    <additional_attributes/>
+  </element>
+</diagram>
