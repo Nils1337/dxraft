@@ -4,71 +4,61 @@
   <element>
     <id>UMLClass</id>
     <coordinates>
-      <x>210</x>
+      <x>273</x>
       <y>14</y>
       <w>259</w>
-      <h>252</h>
+      <h>140</h>
     </coordinates>
     <panel_attributes>RaftServer
 --
 state: {Follower, Candidate, Leader}
 currentTerm: int
 votedFor: serverId
-log: LogEntry[]
 
 commitIndex: int
 lastApplied: int
 nextIndex: int[]
 matchIndex: int[]
 
-timer: Timer
-
---
-#processTimeout()
-#processVoteRequest(VoteRequest)
-#processAppendEntriesRequest(AppendEntriesRequest)
-#processClientRequest(ClientRequest)</panel_attributes>
+--</panel_attributes>
     <additional_attributes/>
   </element>
   <element>
     <id>UMLClass</id>
     <coordinates>
-      <x>210</x>
+      <x>217</x>
       <y>392</y>
       <w>175</w>
       <h>98</h>
     </coordinates>
     <panel_attributes>AppendEntriesResponse
 --
-term: int
 success: boolean</panel_attributes>
     <additional_attributes/>
   </element>
   <element>
     <id>UMLClass</id>
     <coordinates>
-      <x>14</x>
+      <x>21</x>
       <y>392</y>
       <w>175</w>
       <h>98</h>
     </coordinates>
     <panel_attributes>VoteResponse
 --
-term: int
 voteGranted: boolean</panel_attributes>
     <additional_attributes/>
   </element>
   <element>
     <id>UMLClass</id>
     <coordinates>
-      <x>14</x>
+      <x>21</x>
       <y>280</y>
       <w>175</w>
       <h>98</h>
     </coordinates>
     <panel_attributes>VoteRequest
 --
-term: int
 candidateId: serverId
 lastLogIndex: int
 lastLogTerm: int</panel_attributes>
@@ -77,14 +67,13 @@ lastLogTerm: int</panel_attributes>
   <element>
     <id>UMLClass</id>
     <coordinates>
-      <x>210</x>
+      <x>217</x>
       <y>280</y>
       <w>175</w>
       <h>98</h>
     </coordinates>
     <panel_attributes>AppendEntriesRequest
 --
-term: int
 leaderId: serverId
 prevLogIndex: int
 prevLogTerm: int
@@ -95,8 +84,8 @@ leaderCommit: int</panel_attributes>
   <element>
     <id>UMLClass</id>
     <coordinates>
-      <x>14</x>
-      <y>63</y>
+      <x>294</x>
+      <y>203</y>
       <w>175</w>
       <h>42</h>
     </coordinates>
@@ -109,9 +98,9 @@ term: int</panel_attributes>
   <element>
     <id>UMLClass</id>
     <coordinates>
-      <x>14</x>
-      <y>14</y>
-      <w>175</w>
+      <x>21</x>
+      <y>119</y>
+      <w>154</w>
       <h>35</h>
     </coordinates>
     <panel_attributes>Timer
@@ -122,8 +111,8 @@ term: int</panel_attributes>
   <element>
     <id>UMLClass</id>
     <coordinates>
-      <x>14</x>
-      <y>175</y>
+      <x>406</x>
+      <y>329</y>
       <w>175</w>
       <h>35</h>
     </coordinates>
@@ -135,8 +124,8 @@ command</panel_attributes>
   <element>
     <id>UMLClass</id>
     <coordinates>
-      <x>14</x>
-      <y>224</y>
+      <x>406</x>
+      <y>280</y>
       <w>175</w>
       <h>35</h>
     </coordinates>
@@ -148,8 +137,8 @@ command</panel_attributes>
   <element>
     <id>UMLClass</id>
     <coordinates>
-      <x>490</x>
-      <y>14</y>
+      <x>826</x>
+      <y>280</y>
       <w>224</w>
       <h>35</h>
     </coordinates>
@@ -157,5 +146,199 @@ command</panel_attributes>
 --
  - provide API for reading from and writing to raft</panel_attributes>
     <additional_attributes/>
+  </element>
+  <element>
+    <id>UMLClass</id>
+    <coordinates>
+      <x>560</x>
+      <y>14</y>
+      <w>259</w>
+      <h>70</h>
+    </coordinates>
+    <panel_attributes>&lt;&lt;interface&gt;&gt;
+RaftMessageReceiver
+--
+#processVoteRequest(VoteRequest)
+#processAppendEntriesRequest(AppendEntriesRequest)
+#processClientRequest(ClientRequest)</panel_attributes>
+    <additional_attributes/>
+  </element>
+  <element>
+    <id>Relation</id>
+    <coordinates>
+      <x>525</x>
+      <y>21</y>
+      <w>49</w>
+      <h>21</h>
+    </coordinates>
+    <panel_attributes>lt=&lt;&lt;.</panel_attributes>
+    <additional_attributes>50.0;10.0;10.0;10.0</additional_attributes>
+  </element>
+  <element>
+    <id>Relation</id>
+    <coordinates>
+      <x>91</x>
+      <y>56</y>
+      <w>21</w>
+      <h>77</h>
+    </coordinates>
+    <panel_attributes>lt=-
+m1=1
+m2=1
+</panel_attributes>
+    <additional_attributes>10.0;90.0;10.0;10.0</additional_attributes>
+  </element>
+  <element>
+    <id>UMLClass</id>
+    <coordinates>
+      <x>49</x>
+      <y>14</y>
+      <w>98</w>
+      <h>49</h>
+    </coordinates>
+    <panel_attributes>&lt;&lt;interface&gt;&gt;
+TimeoutHandler
+--
+#processTimeout()</panel_attributes>
+    <additional_attributes/>
+  </element>
+  <element>
+    <id>Relation</id>
+    <coordinates>
+      <x>140</x>
+      <y>21</y>
+      <w>147</w>
+      <h>21</h>
+    </coordinates>
+    <panel_attributes>lt=&lt;&lt;.</panel_attributes>
+    <additional_attributes>10.0;10.0;190.0;10.0</additional_attributes>
+  </element>
+  <element>
+    <id>Relation</id>
+    <coordinates>
+      <x>378</x>
+      <y>147</y>
+      <w>35</w>
+      <h>70</h>
+    </coordinates>
+    <panel_attributes>lt=-
+m1=0..n
+m2=1
+</panel_attributes>
+    <additional_attributes>10.0;80.0;10.0;10.0</additional_attributes>
+  </element>
+  <element>
+    <id>Relation</id>
+    <coordinates>
+      <x>168</x>
+      <y>112</y>
+      <w>119</w>
+      <h>35</h>
+    </coordinates>
+    <panel_attributes>lt=-
+m1=1
+m2=1
+</panel_attributes>
+    <additional_attributes>10.0;20.0;150.0;20.0</additional_attributes>
+  </element>
+  <element>
+    <id>UMLClass</id>
+    <coordinates>
+      <x>602</x>
+      <y>140</y>
+      <w>189</w>
+      <h>42</h>
+    </coordinates>
+    <panel_attributes>&lt;&lt;abstract class&gt;&gt;
+RaftNetworkService
+--
+sendMessage(RaftMessage)
+sendClientResponse(ClientResponse)</panel_attributes>
+    <additional_attributes/>
+  </element>
+  <element>
+    <id>Relation</id>
+    <coordinates>
+      <x>525</x>
+      <y>133</y>
+      <w>91</w>
+      <h>35</h>
+    </coordinates>
+    <panel_attributes>lt=-
+m1=1
+m2=1
+</panel_attributes>
+    <additional_attributes>10.0;20.0;110.0;20.0</additional_attributes>
+  </element>
+  <element>
+    <id>Relation</id>
+    <coordinates>
+      <x>686</x>
+      <y>77</y>
+      <w>21</w>
+      <h>77</h>
+    </coordinates>
+    <panel_attributes>lt=-
+m1=1
+m2=1
+</panel_attributes>
+    <additional_attributes>10.0;90.0;10.0;10.0</additional_attributes>
+  </element>
+  <element>
+    <id>UMLClass</id>
+    <coordinates>
+      <x>126</x>
+      <y>525</y>
+      <w>147</w>
+      <h>70</h>
+    </coordinates>
+    <panel_attributes>RaftMessage
+--
+term: int</panel_attributes>
+    <additional_attributes/>
+  </element>
+  <element>
+    <id>Relation</id>
+    <coordinates>
+      <x>161</x>
+      <y>371</y>
+      <w>56</w>
+      <h>168</h>
+    </coordinates>
+    <panel_attributes>lt=&lt;&lt;.</panel_attributes>
+    <additional_attributes>60.0;220.0;10.0;10.0</additional_attributes>
+  </element>
+  <element>
+    <id>Relation</id>
+    <coordinates>
+      <x>105</x>
+      <y>483</y>
+      <w>56</w>
+      <h>56</h>
+    </coordinates>
+    <panel_attributes>lt=&lt;&lt;.</panel_attributes>
+    <additional_attributes>60.0;60.0;10.0;10.0</additional_attributes>
+  </element>
+  <element>
+    <id>Relation</id>
+    <coordinates>
+      <x>245</x>
+      <y>483</y>
+      <w>56</w>
+      <h>56</h>
+    </coordinates>
+    <panel_attributes>lt=&lt;&lt;.</panel_attributes>
+    <additional_attributes>10.0;60.0;60.0;10.0</additional_attributes>
+  </element>
+  <element>
+    <id>Relation</id>
+    <coordinates>
+      <x>210</x>
+      <y>371</y>
+      <w>49</w>
+      <h>168</h>
+    </coordinates>
+    <panel_attributes>lt=&lt;&lt;.</panel_attributes>
+    <additional_attributes>10.0;220.0;50.0;10.0</additional_attributes>
   </element>
 </diagram>
