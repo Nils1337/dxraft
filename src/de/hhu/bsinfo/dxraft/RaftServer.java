@@ -1,7 +1,10 @@
 package de.hhu.bsinfo.dxraft;
 
 import de.hhu.bsinfo.dxraft.context.RaftContext;
+import de.hhu.bsinfo.dxraft.log.Log;
+import de.hhu.bsinfo.dxraft.log.LogEntry;
 import de.hhu.bsinfo.dxraft.message.AppendEntriesRequest;
+import de.hhu.bsinfo.dxraft.message.AppendEntriesResponse;
 import de.hhu.bsinfo.dxraft.message.VoteRequest;
 import de.hhu.bsinfo.dxraft.message.VoteResponse;
 import de.hhu.bsinfo.dxraft.net.RaftMessageReceiver;
@@ -21,6 +24,7 @@ public class RaftServer implements RaftMessageReceiver, TimeoutHandler {
 
     // TODO can servers have id 0?
     private short votedFor = 0;
+    private Log log = new Log();
 
     /* volatile context */
     private int commitIndex = 0;
@@ -88,6 +92,29 @@ public class RaftServer implements RaftMessageReceiver, TimeoutHandler {
     @Override
     public void processAppendEntriesRequest(AppendEntriesRequest request) {
         resetTimer();
+
+        // return false if request term < local term or if logs differ
+        if (currentTerm > request.getTerm() || (log.get(request.getPrevLogIndex()) != null && log.get(request.getPrevLogIndex()).getTerm() != request.getPrevLogTerm())) {
+            networkService.sendMessage(new AppendEntriesResponse(currentTerm, context.getLocalId(), request.getSenderId(), false));
+        }
+
+        LogEntry[] entries = request.getEntries();
+
+        for (int i = 0; i < entries.length; i++) {
+            LogEntry currentEntry = log.get(request.getPrevLogIndex() + 1 + i);
+
+            if (currentEntry != null && currentEntry.getTerm() != entries[i].getTerm()) {
+                log.deleteAfter(request.getPrevLogIndex() + i);
+            }
+
+            log.put(request.getPrevLogIndex() + 1 + i, entries[i]);
+
+        }
+
+        if (commitIndex < request.getLeaderCommitIndex()) {
+            commitIndex = Math.min(request.getLeaderCommitIndex(), request.getPrevLogIndex() + entries.length);
+        }
+
     }
 
 

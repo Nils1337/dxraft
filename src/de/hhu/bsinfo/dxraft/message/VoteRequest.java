@@ -1,6 +1,5 @@
 package de.hhu.bsinfo.dxraft.message;
 
-import de.hhu.bsinfo.dxraft.RaftServer;
 import de.hhu.bsinfo.dxraft.net.RaftMessageReceiver;
 
 public class VoteRequest extends RaftMessage {
