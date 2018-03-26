@@ -28,7 +28,9 @@ public class LocalTestNetworkService extends RaftNetworkService {
                         e.printStackTrace();
                     }
 
-                    System.out.println("Delivering " + message.getClass() + " from " + message.getSenderId() + " to " + message.getReceiverId() + " with term " + message.getTerm());
+                    //System.out.println("Delivering " + message.getClass() + " from " + message.getSenderId() + " to " + message.getReceiverId() + " with term " + message.getTerm());
+
+                    messageReceiver.processMessage(message);
                     message.processMessage(messageReceiver);
                 }
             }

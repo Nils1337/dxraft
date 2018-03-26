@@ -3,15 +3,21 @@ package de.hhu.bsinfo.dxraft.message;
 import de.hhu.bsinfo.dxraft.log.LogEntry;
 import de.hhu.bsinfo.dxraft.net.RaftMessageReceiver;
 
+import java.util.List;
+
 public class AppendEntriesRequest extends RaftMessage {
 
     private int prevLogIndex;
     private int prevLogTerm;
     private int leaderCommitIndex;
-    private LogEntry[] entries;
+    private List<LogEntry> entries;
 
-    public AppendEntriesRequest(int term, short senderId, short receiverId) {
+    public AppendEntriesRequest(int term, short senderId, short receiverId, int prevLogIndex, int prevLogTerm, int leaderCommitIndex, List<LogEntry> entries) {
         super(term, senderId, receiverId);
+        this.prevLogIndex = prevLogIndex;
+        this.prevLogTerm = prevLogTerm;
+        this.leaderCommitIndex = leaderCommitIndex;
+        this.entries = entries;
     }
 
     @Override
@@ -27,7 +33,7 @@ public class AppendEntriesRequest extends RaftMessage {
         return prevLogTerm;
     }
 
-    public LogEntry[] getEntries() {
+    public List<LogEntry> getEntries() {
         return entries;
     }
 

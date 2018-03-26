@@ -17,7 +17,7 @@ votedFor: serverId
 
 commitIndex: int
 lastApplied: int
-nextIndex: int[]
+matchIndex: int[]
 matchIndex: int[]
 
 --</panel_attributes>
