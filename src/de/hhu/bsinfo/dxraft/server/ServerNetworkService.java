@@ -1,10 +1,10 @@
-package de.hhu.bsinfo.dxraft.net;
+package de.hhu.bsinfo.dxraft.server;
 
 import de.hhu.bsinfo.dxraft.message.RaftMessage;
 
-public abstract class RaftNetworkService {
+public abstract class ServerNetworkService {
 
-    RaftMessageReceiver messageReceiver;
+    protected ServerMessageReceiver messageReceiver;
 
     abstract public void sendMessage(RaftMessage message);
 
@@ -12,7 +12,7 @@ public abstract class RaftNetworkService {
 
     abstract public void stop();
 
-    public void setMessageReceiver(RaftMessageReceiver messageReceiver) {
+    public void setMessageReceiver(ServerMessageReceiver messageReceiver) {
         this.messageReceiver = messageReceiver;
     }
 }

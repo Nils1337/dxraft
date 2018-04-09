@@ -1,25 +1,25 @@
 package de.hhu.bsinfo.dxraft.message;
 
-import de.hhu.bsinfo.dxraft.net.RaftMessageReceiver;
+import de.hhu.bsinfo.dxraft.server.ServerMessageReceiver;
 
-public class AppendEntriesResponse extends RaftMessage {
+public class AppendEntriesResponse extends RaftServerMessage {
 
     private boolean success;
     private int matchIndex;
 
-    public AppendEntriesResponse(int term, short senderId, short receiverId, boolean success, int matchIndex) {
-        super(term, senderId, receiverId);
+    public AppendEntriesResponse(short senderId, short receiverId, int term, boolean success) {
+        super(senderId, receiverId, term);
+        this.success = success;
+    }
+
+    public AppendEntriesResponse(short senderId, short receiverId, int term, boolean success, int matchIndex) {
+        super(senderId, receiverId, term);
         this.success = success;
         this.matchIndex = matchIndex;
     }
 
-    public AppendEntriesResponse(int term, short senderId, short receiverId, boolean success) {
-        super(term, senderId, receiverId);
-        this.success = success;
-    }
-
     @Override
-    public void processMessage(RaftMessageReceiver messageReceiver) {
+    public void deliverMessage(ServerMessageReceiver messageReceiver) {
         messageReceiver.processAppendEntriesResponse(this);
     }
 

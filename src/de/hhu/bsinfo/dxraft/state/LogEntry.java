@@ -1,11 +1,18 @@
-package de.hhu.bsinfo.dxraft.log;
+package de.hhu.bsinfo.dxraft.state;
 
 public class LogEntry {
 
     private int term;
     private String path;
     private LogEntryType logEntryType;
-    private byte[] value;
+    private Object value;
+
+    public LogEntry(int term, String path, LogEntryType logEntryType, Object value) {
+        this.term = term;
+        this.path = path;
+        this.logEntryType = logEntryType;
+        this.value = value;
+    }
 
     public int getTerm() {
         return term;
@@ -19,7 +26,8 @@ public class LogEntry {
         return logEntryType;
     }
 
-    public byte[] getValue() {
+
+    public Object getValue() {
         return value;
     }
 }

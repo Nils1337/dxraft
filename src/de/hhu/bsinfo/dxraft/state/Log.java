@@ -1,13 +1,17 @@
-package de.hhu.bsinfo.dxraft.log;
+package de.hhu.bsinfo.dxraft.state;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
 
 public class Log {
 
     private List<LogEntry> log = new ArrayList<>();
-    private int commitIndex = 0;
+    private StateMachine stateMachine = new StateMachine();
+    private int commitIndex = -1;
+
+    public void append(LogEntry logEntry) {
+        log.add(logEntry);
+    }
 
     public int getSize() {
         return log.size();
@@ -29,16 +33,26 @@ public class Log {
         return log.get(index);
     }
 
+    public StateMachine getStateMachine() {
+        return stateMachine;
+    }
+
     public int getCommitIndex() {
         return commitIndex;
     }
 
     public void setCommitIndex(int commitIndex) {
-        this.commitIndex = commitIndex;
+        if (commitIndex < this.commitIndex) {
+            throw new IllegalArgumentException("The commit index must never be decreased!");
+        } else {
+
+            // TODO update state machine
+            this.commitIndex = commitIndex;
+        }
     }
 
     public List<LogEntry> getNewestEntries(int fromIndex) {
-        return log.subList(fromIndex, log.size()-1);
+        return new ArrayList<>(log.subList(fromIndex, log.size()-1));
     }
 
     public void updateLog(int prevLogIndex, List<LogEntry> newEntries) {

@@ -1,10 +1,13 @@
-import de.hhu.bsinfo.dxraft.RaftServer;
+import de.hhu.bsinfo.dxraft.client.RaftClient;
 import de.hhu.bsinfo.dxraft.context.RaftContext;
-import de.hhu.bsinfo.dxraft.message.RaftMessage;
-import de.hhu.bsinfo.dxraft.net.LocalTestNetworkService;
-import de.hhu.bsinfo.dxraft.net.RaftNetworkService;
+import de.hhu.bsinfo.dxraft.message.*;
+import de.hhu.bsinfo.dxraft.server.RaftServer;
+import de.hhu.bsinfo.dxraft.server.RaftServerContext;
+import de.hhu.bsinfo.dxraft.test.LocalTestNetworkService;
+import de.hhu.bsinfo.dxraft.server.ServerNetworkService;
 
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingQueue;
 
 public class Main {
@@ -26,29 +29,88 @@ public class Main {
 
     public static void main(String[] args) {
 
-        List<Short> ids = new ArrayList<>();
-        Map<Short, LinkedBlockingQueue<RaftMessage>> messageQueues = new HashMap<>(SERVER_COUNT);
-        RaftServer[] servers = new RaftServer[SERVER_COUNT];
-
+        List<Short> serverIds = new ArrayList<>();
         for (short i = 1; i < SERVER_COUNT+1; i++) {
-            ids.add(i);
+            serverIds.add(i);
         }
+
+        List<Short> clientIds = new ArrayList<>();
+        clientIds.add((short) (SERVER_COUNT + 1));
+
+        Map<Short, LinkedBlockingQueue<MessageDeliverer>> messageQueues = new HashMap<>(SERVER_COUNT);
 
         for (short i = 1; i < SERVER_COUNT+1; i++) {
             messageQueues.put(i, new LinkedBlockingQueue<>());
-            servers[i-1] = createTestServer(i, ids, messageQueues);
+        }
+
+        Map<Short, RaftClientMessage> responseMap = new ConcurrentHashMap<>(1);
+
+        RaftServer[] servers = new RaftServer[SERVER_COUNT];
+        for (short i = 1; i < SERVER_COUNT+1; i++) {
+            servers[i-1] = createTestServer(i, serverIds, clientIds, messageQueues, responseMap);
         }
 
         for (short i = 1; i < SERVER_COUNT+1; i++) {
             servers[i-1].start();
         }
 
+        RaftContext context = new RaftContext(serverIds, clientIds, (short) (SERVER_COUNT + 1));
+        RaftClient client = new RaftClient(context, new LocalTestNetworkService(context, messageQueues, responseMap, NETWORK_DELAY_RANDOMIZATION));
+
+        while (true) {
+
+            System.out.println("[r,w,d] path");
+            Scanner scanner = new Scanner(System.in);
+            String in = scanner.nextLine();
+
+            if (in.startsWith("r")) {
+                String[] strings = in.split(" ");
+                if (strings.length > 1) {
+                    Object result = client.read(strings[1]);
+                    if (result != null) {
+                        System.out.println(result.toString());
+                    } else {
+                        System.out.println("Could not read path!");
+                    }
+                } else {
+                    System.out.println("invalid operation!");
+                }
+            } else if (in.startsWith("w")) {
+                String[] strings = in.split(" ");
+                if (strings.length > 2) {
+                    boolean result = client.write(strings[1], strings[2]);
+                    if (result) {
+                        System.out.println("Write successful!");
+                    } else {
+                        System.out.println("Write not successful!");
+                    }
+                } else {
+                    System.out.println("invalid operation!");
+                }
+            } else if (in.startsWith("d")) {
+                String[] strings = in.split(" ");
+                if (strings.length > 1) {
+                    boolean result = client.delete(strings[1]);
+                    if (result) {
+                        System.out.println("Deletion successful!");
+                    } else {
+                        System.out.println("Deletion not successful!");
+                    }
+                } else {
+                    System.out.println("invalid operation!");
+                }
+            } else {
+                System.out.println("invalid operation!");
+            }
+
+        }
+
     }
 
-    private static RaftServer createTestServer(short id, List<Short> ids, Map<Short, LinkedBlockingQueue<RaftMessage>> messageQueues) {
-        List<Short> localIds = new ArrayList<>(ids);
-        RaftContext context = new RaftContext(localIds, FOLLOWER_TIMEOUT_DURATION, FOLLOWER_RANDOMIZATION_AMOUNT, ELECTION_TIMEOUT_DURATION, ELECTION_RANDOMIZATION_AMOUNT, HEARTBEAT_TIMEOUT_DURATION, HEARTBEAT_RANDOMIZATION_AMOUNT, id);
-        RaftNetworkService networkService = new LocalTestNetworkService(context, messageQueues, NETWORK_DELAY_RANDOMIZATION);
+    private static RaftServer createTestServer(short id, List<Short> serverIds, List<Short> clientIds, Map<Short, LinkedBlockingQueue<MessageDeliverer>> messageQueues, Map<Short, RaftClientMessage> responseMap) {
+        List<Short> localIds = new ArrayList<>(serverIds);
+        RaftServerContext context = new RaftServerContext(localIds, clientIds, id, FOLLOWER_TIMEOUT_DURATION, FOLLOWER_RANDOMIZATION_AMOUNT, ELECTION_TIMEOUT_DURATION, ELECTION_RANDOMIZATION_AMOUNT, HEARTBEAT_TIMEOUT_DURATION, HEARTBEAT_RANDOMIZATION_AMOUNT);
+        ServerNetworkService networkService = new LocalTestNetworkService(context, messageQueues, responseMap, NETWORK_DELAY_RANDOMIZATION);
         return new RaftServer(context, networkService);
     }
 }

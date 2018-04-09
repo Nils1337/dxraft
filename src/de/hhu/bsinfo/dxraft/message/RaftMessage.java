@@ -1,20 +1,14 @@
 package de.hhu.bsinfo.dxraft.message;
 
-import de.hhu.bsinfo.dxraft.net.RaftMessageReceiver;
+import de.hhu.bsinfo.dxraft.server.ServerMessageReceiver;
 
-public abstract class RaftMessage {
-    protected int term;
+public class RaftMessage {
     protected short senderId;
     protected short receiverId;
 
-    protected RaftMessage(int term, short senderId, short receiverId) {
-        this.term = term;
+    protected RaftMessage(short senderId, short receiverId) {
         this.senderId = senderId;
         this.receiverId = receiverId;
-    }
-
-    public int getTerm() {
-        return term;
     }
 
     public short getSenderId() {
@@ -25,5 +19,4 @@ public abstract class RaftMessage {
         return receiverId;
     }
 
-    public abstract void processMessage(RaftMessageReceiver messageReceiver);
 }

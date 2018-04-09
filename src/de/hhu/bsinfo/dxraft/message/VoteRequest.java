@@ -1,12 +1,12 @@
 package de.hhu.bsinfo.dxraft.message;
 
-import de.hhu.bsinfo.dxraft.net.RaftMessageReceiver;
+import de.hhu.bsinfo.dxraft.server.ServerMessageReceiver;
 
-public class VoteRequest extends RaftMessage {
+public class VoteRequest extends RaftServerMessage {
     private int lastLogIndex;
 
-    public VoteRequest(int term, short senderId, short receiverId, int lastLogIndex, int lastLogTerm) {
-        super(term, senderId, receiverId);
+    public VoteRequest(short senderId, short receiverId, int term, int lastLogIndex, int lastLogTerm) {
+        super(senderId, receiverId, term);
         this.lastLogIndex = lastLogIndex;
         this.lastLogTerm = lastLogTerm;
     }
@@ -22,7 +22,7 @@ public class VoteRequest extends RaftMessage {
     }
 
     @Override
-    public void processMessage(RaftMessageReceiver messageReceiver) {
+    public void deliverMessage(ServerMessageReceiver messageReceiver) {
         messageReceiver.processVoteRequest(this);
     }
 }
