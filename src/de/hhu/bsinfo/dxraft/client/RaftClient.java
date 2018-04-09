@@ -10,6 +10,8 @@ import java.util.concurrent.ThreadLocalRandom;
 
 public class RaftClient {
 
+    public static final boolean debug = false;
+
     private static final int retryTimeout = 100;
     private static final int overallTryDuration = 10 * 1000;
 
@@ -39,13 +41,13 @@ public class RaftClient {
         return false;
     }
 
-    public boolean delete(String path) {
+    public Object delete(String path) {
         ClientResponse response = sendRequest(ClientRequest.RequestType.DELETE, path, null);
         if (response != null) {
-            return response.isSuccess();
+            return response.getValue();
         }
 
-        return false;
+        return null;
     }
 
     private ClientResponse sendRequest(ClientRequest.RequestType requestType, String path, Object value) {
@@ -56,12 +58,26 @@ public class RaftClient {
         long startTime = System.currentTimeMillis();
         long currentTime = System.currentTimeMillis();
         while (currentTime - startTime + overallTryDuration > 0) {
+
+            if (debug) {
+                System.out.println("Client " + context.getLocalId() + " sending request to server " + serverId);
+            }
+
             RaftClientMessage response = networkService.sendRequest(new ClientRequest(context.getLocalId(), serverId, requestType, path, value));
+
             if (response instanceof ClientResponse) {
+                if (debug) {
+                    System.out.println("Client " + context.getLocalId() + " got response!");
+                }
                 return (ClientResponse) response;
             }
 
             ClientRedirection redirection = (ClientRedirection) response;
+
+            if (debug) {
+                System.out.println("Client " + context.getLocalId() + " got redirection to server " + redirection.getLeaderId() + "!");
+            }
+
             if (redirection.getLeaderId() != 0) {
                 serverId = redirection.getLeaderId();
             } else {

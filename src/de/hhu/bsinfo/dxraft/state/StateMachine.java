@@ -18,4 +18,12 @@ public class StateMachine {
     public void delete(String path) {
         state.remove(path);
     }
+
+    public void applyLogEntry(LogEntry logEntry) {
+        if (logEntry.isWriting()) {
+            state.put(logEntry.getPath(), logEntry.getValue());
+        } else {
+            logEntry.setValue(state.remove(logEntry.getPath()));
+        }
+    }
 }

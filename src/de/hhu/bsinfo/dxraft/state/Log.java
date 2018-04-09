@@ -41,18 +41,25 @@ public class Log {
         return commitIndex;
     }
 
-    public void setCommitIndex(int commitIndex) {
-        if (commitIndex < this.commitIndex) {
+    public void updateCommitIndex(int newCommitIndex) {
+        if (newCommitIndex < this.commitIndex) {
             throw new IllegalArgumentException("The commit index must never be decreased!");
-        } else {
-
-            // TODO update state machine
-            this.commitIndex = commitIndex;
         }
+
+        if (commitIndex >= log.size()) {
+            throw new IllegalArgumentException("Cannot commit index that is not logged");
+        }
+
+        // update state machine
+        for (int i = this.commitIndex + 1; i <= newCommitIndex; i++) {
+            stateMachine.applyLogEntry(log.get(i));
+        }
+        this.commitIndex = newCommitIndex;
+
     }
 
     public List<LogEntry> getNewestEntries(int fromIndex) {
-        return new ArrayList<>(log.subList(fromIndex, log.size()-1));
+        return new ArrayList<>(log.subList(fromIndex, log.size()));
     }
 
     public void updateLog(int prevLogIndex, List<LogEntry> newEntries) {

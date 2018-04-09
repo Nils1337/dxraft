@@ -58,7 +58,6 @@ public class Main {
         RaftClient client = new RaftClient(context, new LocalTestNetworkService(context, messageQueues, responseMap, NETWORK_DELAY_RANDOMIZATION));
 
         while (true) {
-
             System.out.println("[r,w,d] path");
             Scanner scanner = new Scanner(System.in);
             String in = scanner.nextLine();
@@ -90,11 +89,11 @@ public class Main {
             } else if (in.startsWith("d")) {
                 String[] strings = in.split(" ");
                 if (strings.length > 1) {
-                    boolean result = client.delete(strings[1]);
-                    if (result) {
-                        System.out.println("Deletion successful!");
+                    Object result = client.delete(strings[1]);
+                    if (result != null) {
+                        System.out.println("Deletion of " + result + " under \"" + strings[1] + "\" was successful!");
                     } else {
-                        System.out.println("Deletion not successful!");
+                        System.out.println("Deletion failed!");
                     }
                 } else {
                     System.out.println("invalid operation!");

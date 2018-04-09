@@ -1,6 +1,9 @@
 package de.hhu.bsinfo.dxraft.state;
 
 public class LogEntry {
+    public enum LogEntryType {
+        PUT, DELETE
+    }
 
     private int term;
     private String path;
@@ -11,6 +14,10 @@ public class LogEntry {
         this.term = term;
         this.path = path;
         this.logEntryType = logEntryType;
+        this.value = value;
+    }
+
+    public void setValue(Object value) {
         this.value = value;
     }
 
@@ -26,6 +33,13 @@ public class LogEntry {
         return logEntryType;
     }
 
+    public boolean isWriting() {
+        return logEntryType == LogEntryType.PUT;
+    }
+
+    public boolean isDeletion() {
+        return logEntryType == LogEntryType.DELETE;
+    }
 
     public Object getValue() {
         return value;

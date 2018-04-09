@@ -29,6 +29,18 @@ public class ClientRequest extends RaftMessage implements MessageDeliverer {
         return requestType;
     }
 
+    public boolean isWriteRequest() {
+        return requestType == RequestType.PUT;
+    }
+
+    public boolean isReadRequest() {
+        return requestType == RequestType.GET;
+    }
+
+    public boolean isDeleteRequest() {
+        return requestType == RequestType.DELETE;
+    }
+
     public String getPath() {
         return path;
     }

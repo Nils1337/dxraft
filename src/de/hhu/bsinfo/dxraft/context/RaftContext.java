@@ -1,6 +1,7 @@
 package de.hhu.bsinfo.dxraft.context;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 public class RaftContext {
 
@@ -13,9 +14,11 @@ public class RaftContext {
     private short localId;
 
     public RaftContext(List<Short> raftServers, List<Short> raftClients, short localId) {
-        this.raftServers = raftServers;
-        this.raftClients = raftClients;
         this.localId = localId;
+
+        // delete local id from server list or client list
+        this.raftServers = raftServers.stream().filter(id -> id != localId).collect(Collectors.toList());
+        this.raftClients = raftClients.stream().filter(id -> id != localId).collect(Collectors.toList());
     }
 
     public List<Short> getRaftServers() {

@@ -79,7 +79,7 @@ public class LocalTestNetworkService extends ServerNetworkService implements Cli
     public RaftClientMessage sendRequest(ClientRequest request) {
         messageQueues.get(request.getReceiverId()).add(request);
         RaftClientMessage response;
-        while ((response = responseMap.get(request.getSenderId())) == null) {
+        while ((response = responseMap.remove(request.getSenderId())) == null) {
             try {
                 Thread.sleep(100);
             } catch (InterruptedException e) {
