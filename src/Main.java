@@ -58,11 +58,11 @@ public class Main {
         RaftClient client = new RaftClient(context, new LocalTestNetworkService(context, messageQueues, responseMap, NETWORK_DELAY_RANDOMIZATION));
 
         while (true) {
-            System.out.println("[r,w,d] path");
+            System.out.print(">> ");
             Scanner scanner = new Scanner(System.in);
             String in = scanner.nextLine();
 
-            if (in.startsWith("r")) {
+            if (in.startsWith("read")) {
                 String[] strings = in.split(" ");
                 if (strings.length > 1) {
                     Object result = client.read(strings[1]);
@@ -74,7 +74,7 @@ public class Main {
                 } else {
                     System.out.println("invalid operation!");
                 }
-            } else if (in.startsWith("w")) {
+            } else if (in.startsWith("write")) {
                 String[] strings = in.split(" ");
                 if (strings.length > 2) {
                     boolean result = client.write(strings[1], strings[2]);
@@ -86,7 +86,7 @@ public class Main {
                 } else {
                     System.out.println("invalid operation!");
                 }
-            } else if (in.startsWith("d")) {
+            } else if (in.startsWith("delete")) {
                 String[] strings = in.split(" ");
                 if (strings.length > 1) {
                     Object result = client.delete(strings[1]);

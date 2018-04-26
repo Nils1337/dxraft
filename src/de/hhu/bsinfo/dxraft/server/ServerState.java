@@ -101,7 +101,9 @@ public class ServerState {
             throw new IllegalStateException("Server could not convert to leader because state is " + state.toString() + " but should be CANDIDATE!");
         }
 
-        System.out.println("Server " + context.getLocalId() + " converting to Leader in term " + currentTerm + "!");
+        if (RaftServer.electionDebug) {
+            System.out.println("Server " + context.getLocalId() + " converting to Leader in term " + currentTerm + "!");
+        }
 
         state = State.LEADER;
 
