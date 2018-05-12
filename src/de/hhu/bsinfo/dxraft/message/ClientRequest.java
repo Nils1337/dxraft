@@ -1,6 +1,7 @@
 package de.hhu.bsinfo.dxraft.message;
 
 import de.hhu.bsinfo.dxraft.server.ServerMessageReceiver;
+import de.hhu.bsinfo.dxraft.data.RaftData;
 
 public class ClientRequest extends RaftMessage implements MessageDeliverer {
 
@@ -10,7 +11,7 @@ public class ClientRequest extends RaftMessage implements MessageDeliverer {
 
     private RequestType requestType;
     private String path;
-    private Object value;
+    private RaftData value;
 
     public ClientRequest(short senderId, short receiverId, RequestType requestType, String path) {
         super(senderId, receiverId);
@@ -18,7 +19,7 @@ public class ClientRequest extends RaftMessage implements MessageDeliverer {
         this.path = path;
     }
 
-    public ClientRequest(short senderId, short receiverId, RequestType requestType, String path, Object value) {
+    public ClientRequest(short senderId, short receiverId, RequestType requestType, String path, RaftData value) {
         super(senderId, receiverId);
         this.requestType = requestType;
         this.path = path;
@@ -45,7 +46,7 @@ public class ClientRequest extends RaftMessage implements MessageDeliverer {
         return path;
     }
 
-    public Object getValue() {
+    public RaftData getValue() {
         return value;
     }
 

@@ -1,5 +1,7 @@
 package de.hhu.bsinfo.dxraft.state;
 
+import de.hhu.bsinfo.dxraft.data.RaftData;
+
 public class LogEntry {
     public enum LogEntryType {
         PUT, DELETE
@@ -8,16 +10,16 @@ public class LogEntry {
     private int term;
     private String path;
     private LogEntryType logEntryType;
-    private Object value;
+    private RaftData value;
 
-    public LogEntry(int term, String path, LogEntryType logEntryType, Object value) {
+    public LogEntry(int term, String path, LogEntryType logEntryType, RaftData value) {
         this.term = term;
         this.path = path;
         this.logEntryType = logEntryType;
         this.value = value;
     }
 
-    public void setValue(Object value) {
+    public void setValue(RaftData value) {
         this.value = value;
     }
 
@@ -41,7 +43,7 @@ public class LogEntry {
         return logEntryType == LogEntryType.DELETE;
     }
 
-    public Object getValue() {
+    public RaftData getValue() {
         return value;
     }
 }

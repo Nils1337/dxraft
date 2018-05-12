@@ -3,6 +3,7 @@ package de.hhu.bsinfo.dxraft.server;
 import de.hhu.bsinfo.dxraft.state.Log;
 import de.hhu.bsinfo.dxraft.message.*;
 import de.hhu.bsinfo.dxraft.state.LogEntry;
+import de.hhu.bsinfo.dxraft.data.RaftData;
 import de.hhu.bsinfo.dxraft.timer.RaftTimer;
 import de.hhu.bsinfo.dxraft.timer.TimeoutHandler;
 
@@ -226,7 +227,7 @@ public class RaftServer implements ServerMessageReceiver, TimeoutHandler {
                     System.out.println("Server " + context.getLocalId() + " got read request!");
                 }
 
-                Object value = log.getStateMachine().read(request.getPath());
+                RaftData value = log.getStateMachine().read(request.getPath());
                 ClientResponse response = new ClientResponse(context.getLocalId(), request.getSenderId(), value);
                 networkService.sendMessage(response);
             } else if (request.isWriteRequest() || request.isDeleteRequest()) {

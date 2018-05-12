@@ -1,5 +1,6 @@
 import de.hhu.bsinfo.dxraft.client.RaftClient;
 import de.hhu.bsinfo.dxraft.context.RaftContext;
+import de.hhu.bsinfo.dxraft.data.StringData;
 import de.hhu.bsinfo.dxraft.message.*;
 import de.hhu.bsinfo.dxraft.server.RaftServer;
 import de.hhu.bsinfo.dxraft.server.RaftServerContext;
@@ -77,7 +78,7 @@ public class Main {
             } else if (in.startsWith("write")) {
                 String[] strings = in.split(" ");
                 if (strings.length > 2) {
-                    boolean result = client.write(strings[1], strings[2]);
+                    boolean result = client.write(strings[1], new StringData(strings[2]));
                     if (result) {
                         System.out.println("Write successful!");
                     } else {

@@ -1,17 +1,19 @@
 package de.hhu.bsinfo.dxraft.message;
 
 
+import de.hhu.bsinfo.dxraft.data.RaftData;
+
 public class ClientResponse extends RaftClientMessage {
 
     private boolean success;
-    private Object value;
+    private RaftData value;
 
     public ClientResponse(short senderId, short receiverId, boolean success) {
         super(senderId, receiverId);
         this.success = success;
     }
 
-    public ClientResponse(short senderId, short receiverId, Object value) {
+    public ClientResponse(short senderId, short receiverId, RaftData value) {
         super(senderId, receiverId);
         this.value = value;
     }
@@ -20,7 +22,7 @@ public class ClientResponse extends RaftClientMessage {
         return success;
     }
 
-    public Object getValue() {
+    public RaftData getValue() {
         return value;
     }
 }

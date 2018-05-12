@@ -5,6 +5,7 @@ import de.hhu.bsinfo.dxraft.message.ClientRedirection;
 import de.hhu.bsinfo.dxraft.message.ClientRequest;
 import de.hhu.bsinfo.dxraft.message.ClientResponse;
 import de.hhu.bsinfo.dxraft.message.RaftClientMessage;
+import de.hhu.bsinfo.dxraft.data.RaftData;
 
 import java.util.concurrent.ThreadLocalRandom;
 
@@ -32,7 +33,7 @@ public class RaftClient {
         return null;
     }
 
-    public boolean write(String path, Object value) {
+    public boolean write(String path, RaftData value) {
         ClientResponse response = sendRequest(ClientRequest.RequestType.PUT, path, value);
         if (response != null) {
             return response.isSuccess();
@@ -50,7 +51,7 @@ public class RaftClient {
         return null;
     }
 
-    private ClientResponse sendRequest(ClientRequest.RequestType requestType, String path, Object value) {
+    private ClientResponse sendRequest(ClientRequest.RequestType requestType, String path, RaftData value) {
         // select a random server to forward request to
         int random = ThreadLocalRandom.current().nextInt(context.getRaftServers().size());
         short serverId = context.getRaftServers().get(random);
