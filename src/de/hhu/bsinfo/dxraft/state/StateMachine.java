@@ -25,7 +25,7 @@ public class StateMachine {
         if (logEntry.isWriting()) {
             state.put(logEntry.getPath(), logEntry.getValue());
         } else {
-            logEntry.setValue(state.remove(logEntry.getPath()));
+            state.remove(logEntry.getPath());
         }
     }
 }

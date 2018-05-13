@@ -2,11 +2,15 @@ package de.hhu.bsinfo.dxraft.server;
 
 import de.hhu.bsinfo.dxraft.state.Log;
 import de.hhu.bsinfo.dxraft.timer.RaftTimer;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.util.HashMap;
 import java.util.Map;
 
 public class ServerState {
+
+    private static final Logger LOGGER = LogManager.getLogger();
 
     private enum State {
         FOLLOWER, CANDIDATE, LEADER
@@ -101,9 +105,7 @@ public class ServerState {
             throw new IllegalStateException("Server could not convert to leader because state is " + state.toString() + " but should be CANDIDATE!");
         }
 
-        if (RaftServer.electionDebug) {
-            System.out.println("Server " + context.getLocalId() + " converting to Leader in term " + currentTerm + "!");
-        }
+        LOGGER.info("Server {} converting to Leader in term {}!", context.getLocalId(), currentTerm);
 
         state = State.LEADER;
 
@@ -173,9 +175,7 @@ public class ServerState {
             throw new IllegalStateException("Server could not convert to candidate because state is " + state.toString() + " but should be FOLLOWER!");
         }
 
-        if (RaftServer.electionDebug) {
-            System.out.println("Server " + context.getLocalId() + " converting to Candidate!");
-        }
+        LOGGER.debug("Server {} converting to converting to Candidate!", context.getLocalId());
         state = State.CANDIDATE;
         resetStateAsCandidate();
     }
@@ -202,10 +202,7 @@ public class ServerState {
             // if server receives message with higher term it has to convert to follower
             // if it already is a follower, only reset the timer and clear the current vote
             if (state != State.FOLLOWER) {
-                if (RaftServer.electionDebug) {
-                    System.out.println("Server " + context.getLocalId() + " converting to Follower because received message with higher term!");
-                }
-
+                LOGGER.debug("Server {} converting to Follower because received message with higher term!", context.getLocalId());
                 convertStateToFollower();
             } else {
                 resetStateAsFollower();
@@ -223,9 +220,7 @@ public class ServerState {
     public void checkTerm(int term, short leader) {
         if (term > currentTerm) {
 
-            if (RaftServer.electionDebug) {
-                System.out.println("Server " + context.getLocalId() + " converting to Follower because received message with higher term!");
-            }
+            LOGGER.debug("Server {} converting to Follower because received message with higher term!", context.getLocalId());
 
             // if server receives message with higher term it has to convert to follower
             // if it already is a follower, only reset the timer and clear the current vote

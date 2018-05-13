@@ -6,12 +6,14 @@ import de.hhu.bsinfo.dxraft.state.LogEntry;
 import de.hhu.bsinfo.dxraft.data.RaftData;
 import de.hhu.bsinfo.dxraft.timer.RaftTimer;
 import de.hhu.bsinfo.dxraft.timer.TimeoutHandler;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Map;
 
 public class RaftServer implements ServerMessageReceiver, TimeoutHandler {
+
+    private static final Logger LOGGER = LogManager.getLogger();
 
     public static final boolean electionDebug = false;
     public static final boolean clientRequestDebug = false;
@@ -70,10 +72,7 @@ public class RaftServer implements ServerMessageReceiver, TimeoutHandler {
         if (state.isCandidate()) {
             if (response.isVoteGranted()) {
 
-                if (electionDebug) {
-                    System.out.println("Server " + context.getLocalId() + " got vote from server " + response.getSenderId() + "!");
-                }
-
+                LOGGER.debug("Server {} got vote from server {}!", context.getLocalId(), response.getSenderId());
                 state.getVotesMap().put(response.getSenderId(), true);
 
                 //check if server got quorum
@@ -83,9 +82,7 @@ public class RaftServer implements ServerMessageReceiver, TimeoutHandler {
                 }
             } else {
 
-                if (electionDebug) {
-                    System.out.println("Server " + context.getLocalId() + " got rejection from server " + response.getSenderId() + "!");
-                }
+                LOGGER.debug("Server {} got rejection from server {}!", context.getLocalId(), response.getSenderId());
                 state.getVotesMap().put(response.getSenderId(), false);
             }
         }
@@ -104,9 +101,7 @@ public class RaftServer implements ServerMessageReceiver, TimeoutHandler {
         // it means a leader was already chosen and the server should convert back to follower
         if (state.getCurrentTerm() == request.getTerm()) {
             if (state.isCandidate()) {
-                if (electionDebug) {
-                    System.out.println("Server " + context.getLocalId() + " terminating election because got request from leader in current term " + state.getCurrentTerm() + "!");
-                }
+                LOGGER.debug("Server {} terminating election because it got request from leader in current term {}!", context.getLocalId(), state.getCurrentTerm());
                 state.convertStateToFollower();;
             }
 
@@ -117,10 +112,8 @@ public class RaftServer implements ServerMessageReceiver, TimeoutHandler {
         // return false if request term < local term or if logs differ
         if (state.getCurrentTerm() > request.getTerm() || log.getSize() <= request.getPrevLogIndex() || (!log.isEmpty() && (request.getPrevLogIndex() >= 0 && log.get(request.getPrevLogIndex()).getTerm() != request.getPrevLogTerm()))) {
 
-            if (clientRequestDebug) {
-                System.out.println("Server " + context.getLocalId() + " is rejecting append entries request because it is an old request or the logs differ!");
-            }
 
+            LOGGER.debug("Server {} is rejecting append entries request because it is an old request or the logs differ!", context.getLocalId());
             networkService.sendMessage(new AppendEntriesResponse(context.getLocalId(), request.getSenderId(), state.getCurrentTerm(),false));
             return;
         }
@@ -138,9 +131,7 @@ public class RaftServer implements ServerMessageReceiver, TimeoutHandler {
                 log.updateCommitIndex(Math.min(request.getLeaderCommitIndex(), request.getPrevLogIndex() + request.getEntries().size()));
             }
 
-            if (clientRequestDebug) {
-                System.out.println("Server " + context.getLocalId() + " received an append entries request and updated its log. The current matchIndex is " + matchIndex + "!");
-            }
+            LOGGER.debug("Server {} received an append entries request and updated its log. The current matchIndex is {}!", context.getLocalId(), matchIndex);
         } else {
             matchIndex = request.getPrevLogIndex();
 
@@ -163,9 +154,8 @@ public class RaftServer implements ServerMessageReceiver, TimeoutHandler {
             // -> decrease nextIndex of the follower and try again
             if (!response.isSuccess() && state.getNextIndexMap().get(response.getSenderId()) > 0) {
 
-                if (clientRequestDebug) {
-                    System.out.println("Server " + context.getLocalId() + " got rejected append entries response from server " + response.getSenderId() +", is trying again with decremented index!");
-                }
+                LOGGER.debug("Server {} got rejected append entries response from server {}, is trying again with decremented index!",
+                        context.getLocalId(), response.getSenderId());
                 state.getNextIndexMap().put(response.getSenderId(), state.getNextIndexMap().get(response.getSenderId()) - 1);
                 sendAppendEntriesRequest(response.getSenderId());
             }
@@ -173,9 +163,7 @@ public class RaftServer implements ServerMessageReceiver, TimeoutHandler {
             // if append entries request was successful, update the matchIndex and nextIndex for the follower
             if (response.isSuccess()) {
 
-                /*if (clientRequestDebug) {
-                    System.out.println("Server " + context.getLocalId() + " got successful append entries response from server " + response.getSenderId() +" with matchIndex "+ response.getMatchIndex() + "!");
-                }*/
+                LOGGER.trace("Server {} got successful append entries response from server {} with matchIndex {}!", context.getLocalId(), response.getSenderId(), response.getMatchIndex());
                 // TODO correct?
                 state.getMatchIndexMap().put(response.getSenderId(), response.getMatchIndex());
                 state.getNextIndexMap().put(response.getSenderId(), response.getMatchIndex() + 1);
@@ -184,9 +172,8 @@ public class RaftServer implements ServerMessageReceiver, TimeoutHandler {
                 int currentCommitIndex = log.getCommitIndex();
                 if (newCommitIndex > currentCommitIndex) {
 
-                    if (clientRequestDebug) {
-                        System.out.println("Server " + context.getLocalId() + " is now committing the log entries up to index " + newCommitIndex + "!");
-                    }
+                    LOGGER.info("Server {} is now committing the log entries up to index {}!", context.getLocalId(), newCommitIndex);
+
                     log.updateCommitIndex(newCommitIndex);
 
                     // send responses for every log entry that was handled by this server and is now committed
@@ -196,16 +183,9 @@ public class RaftServer implements ServerMessageReceiver, TimeoutHandler {
                         ClientRequest request = logEntry.getClientRequest();
 
                         if (request != null) {
-                            if (clientRequestDebug) {
-                                System.out.println("Server " + context.getLocalId() + " is sending response to client " + request.getSenderId() + " for index "+ i + " because it was committed!");
-                            }
+                            LOGGER.debug("Server {} is sending response to client {} for index {} because it was committed!", context.getLocalId(), request.getSenderId(), i);
 
-                            ClientResponse clientResponse;
-                            if (request.isDeleteRequest()) {
-                                clientResponse = new ClientResponse(context.getLocalId(), request.getSenderId(), logEntry.getValue());
-                            } else {
-                                clientResponse = new ClientResponse(context.getLocalId(), request.getSenderId(), true);
-                            }
+                            ClientResponse clientResponse = new ClientResponse(context.getLocalId(), request.getSenderId(), true);
 
                             logEntry.setClientResponse(clientResponse);
                             networkService.sendMessage(clientResponse);
@@ -226,10 +206,7 @@ public class RaftServer implements ServerMessageReceiver, TimeoutHandler {
             // TODO check with majority of servers if still leader?
 
             if (request.isReadRequest()) {
-                if (clientRequestDebug) {
-                    System.out.println("Server " + context.getLocalId() + " got read request!");
-                }
-
+                LOGGER.debug("Server {} got read request!", context.getLocalId());
                 RaftData value = log.getStateMachine().read(request.getPath());
                 ClientResponse response = new ClientResponse(context.getLocalId(), request.getSenderId(), value);
                 networkService.sendMessage(response);
@@ -251,9 +228,7 @@ public class RaftServer implements ServerMessageReceiver, TimeoutHandler {
 
                         if (clientResponse == null) {
                             // this should not happen
-                            if (clientRequestDebug) {
-                                System.out.println("Server " + context.getLocalId() + " got request with already existent id which is not pending and hast no response associated to it!");
-                            }
+                            LOGGER.error("Server {} got request with already existent id which is not pending and has no response associated to it!", context.getLocalId());
                         } else {
                             networkService.sendMessage(clientResponse);
                         }
@@ -264,9 +239,7 @@ public class RaftServer implements ServerMessageReceiver, TimeoutHandler {
                     // save request to later send response
                     pendingRequests.add(logEntry);
 
-                    if (clientRequestDebug) {
-                        System.out.println("Server " + context.getLocalId() + " got write request and is sending append entries requests to followers!");
-                    }
+                    LOGGER.debug("Server {} got write request and is sending append entries requests to followers!", context.getLocalId());
                     // update logs of all servers
                     for (short server : context.getRaftServers()) {
                         sendAppendEntriesRequest(server);
@@ -276,9 +249,7 @@ public class RaftServer implements ServerMessageReceiver, TimeoutHandler {
 
         // else redirect client to current leader
         } else {
-            if (clientRequestDebug) {
-                System.out.println("Server " + context.getLocalId() + " got client request and is redirecting the client to server " + state.getCurrentLeader() +"!");
-            }
+            LOGGER.debug("Server {} got client request and is redirecting the client to server {}!", context.getLocalId(), state.getCurrentLeader());
             networkService.sendMessage(new ClientRedirection(context.getLocalId(), request.getSenderId(), state.getCurrentLeader()));
         }
 
@@ -287,10 +258,7 @@ public class RaftServer implements ServerMessageReceiver, TimeoutHandler {
 
     @Override
     public void processTimeout() {
-        /*if (debug) {
-            System.out.println("Server " + context.getLocalId() + " timed out as " + state.getState() + "!");
-        }*/
-
+        LOGGER.trace("Server {} timed out as {}!", context.getLocalId(), state.getState());
         if (state.isFollower()) {
 
             // server timed out as follower, so the leader is not available

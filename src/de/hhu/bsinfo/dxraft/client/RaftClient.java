@@ -6,11 +6,14 @@ import de.hhu.bsinfo.dxraft.message.ClientRequest;
 import de.hhu.bsinfo.dxraft.message.ClientResponse;
 import de.hhu.bsinfo.dxraft.message.RaftClientMessage;
 import de.hhu.bsinfo.dxraft.data.RaftData;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.util.concurrent.ThreadLocalRandom;
 
 public class RaftClient {
 
+    private static final Logger LOGGER = LogManager.getLogger();
     public static final boolean debug = false;
 
     private static final int retryTimeout = 100;
@@ -60,24 +63,18 @@ public class RaftClient {
         long currentTime = System.currentTimeMillis();
         while (currentTime - startTime + overallTryDuration > 0) {
 
-            if (debug) {
-                System.out.println("Client " + context.getLocalId() + " sending request to server " + serverId);
-            }
+            LOGGER.debug("Client {} sending request to server {}", context.getLocalId(), serverId);
 
             RaftClientMessage response = networkService.sendRequest(new ClientRequest(context.getLocalId(), serverId, requestType, path, value));
 
             if (response instanceof ClientResponse) {
-                if (debug) {
-                    System.out.println("Client " + context.getLocalId() + " got response!");
-                }
+                LOGGER.debug("Client {} got response!", context.getLocalId());
                 return (ClientResponse) response;
             }
 
             ClientRedirection redirection = (ClientRedirection) response;
 
-            if (debug) {
-                System.out.println("Client " + context.getLocalId() + " got redirection to server " + redirection.getLeaderId() + "!");
-            }
+            LOGGER.debug("Client {} got redirection to server {}!", context.getLocalId(),redirection.getLeaderId());
 
             if (redirection.getLeaderId() != 0) {
                 serverId = redirection.getLeaderId();

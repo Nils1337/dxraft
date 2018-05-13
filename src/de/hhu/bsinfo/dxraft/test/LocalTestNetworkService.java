@@ -34,6 +34,7 @@ public class LocalTestNetworkService extends ServerNetworkService implements Cli
                         e.printStackTrace();
                     }
 
+
                     //System.out.println("Delivering " + message.getClass() + " from " + message.getSenderId() + " to " + message.getReceiverId() + " with term " + message.getTerm());
 
                     message.deliverMessage(messageReceiver);
