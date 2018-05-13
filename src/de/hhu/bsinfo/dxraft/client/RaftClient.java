@@ -1,6 +1,7 @@
 package de.hhu.bsinfo.dxraft.client;
 
 import de.hhu.bsinfo.dxraft.context.RaftContext;
+import de.hhu.bsinfo.dxraft.context.RaftID;
 import de.hhu.bsinfo.dxraft.message.ClientRedirection;
 import de.hhu.bsinfo.dxraft.message.ClientRequest;
 import de.hhu.bsinfo.dxraft.message.ClientResponse;
@@ -57,7 +58,7 @@ public class RaftClient {
     private ClientResponse sendRequest(ClientRequest.RequestType requestType, String path, RaftData value) {
         // select a random server to forward request to
         int random = ThreadLocalRandom.current().nextInt(context.getRaftServers().size());
-        short serverId = context.getRaftServers().get(random);
+        RaftID serverId = context.getRaftServers().get(random);
 
         long startTime = System.currentTimeMillis();
         long currentTime = System.currentTimeMillis();
@@ -76,7 +77,7 @@ public class RaftClient {
 
             LOGGER.debug("Client {} got redirection to server {}!", context.getLocalId(),redirection.getLeaderId());
 
-            if (redirection.getLeaderId() != 0) {
+            if (redirection.getLeaderId() != null) {
                 serverId = redirection.getLeaderId();
             } else {
                 try {

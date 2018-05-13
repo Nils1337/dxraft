@@ -1,5 +1,6 @@
 package de.hhu.bsinfo.dxraft.message;
 
+import de.hhu.bsinfo.dxraft.context.RaftID;
 import de.hhu.bsinfo.dxraft.server.ServerMessageReceiver;
 
 public class AppendEntriesResponse extends RaftServerMessage {
@@ -7,12 +8,12 @@ public class AppendEntriesResponse extends RaftServerMessage {
     private boolean success;
     private int matchIndex;
 
-    public AppendEntriesResponse(short senderId, short receiverId, int term, boolean success) {
+    public AppendEntriesResponse(RaftID senderId, RaftID receiverId, int term, boolean success) {
         super(senderId, receiverId, term);
         this.success = success;
     }
 
-    public AppendEntriesResponse(short senderId, short receiverId, int term, boolean success, int matchIndex) {
+    public AppendEntriesResponse(RaftID senderId, RaftID receiverId, int term, boolean success, int matchIndex) {
         super(senderId, receiverId, term);
         this.success = success;
         this.matchIndex = matchIndex;

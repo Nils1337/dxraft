@@ -1,5 +1,6 @@
 import de.hhu.bsinfo.dxraft.client.RaftClient;
 import de.hhu.bsinfo.dxraft.context.RaftContext;
+import de.hhu.bsinfo.dxraft.context.RaftID;
 import de.hhu.bsinfo.dxraft.data.StringData;
 import de.hhu.bsinfo.dxraft.message.*;
 import de.hhu.bsinfo.dxraft.server.RaftServer;
@@ -30,32 +31,32 @@ public class Main {
 
     public static void main(String[] args) {
 
-        List<Short> serverIds = new ArrayList<>();
+        List<RaftID> serverIds = new ArrayList<>();
         for (short i = 1; i < SERVER_COUNT+1; i++) {
-            serverIds.add(i);
+            serverIds.add(new RaftID(i));
         }
 
-        List<Short> clientIds = new ArrayList<>();
-        clientIds.add((short) (SERVER_COUNT + 1));
+        List<RaftID> clientIds = new ArrayList<>();
+        clientIds.add(new RaftID((short) (SERVER_COUNT + 1)));
 
-        Map<Short, LinkedBlockingQueue<MessageDeliverer>> messageQueues = new HashMap<>(SERVER_COUNT);
+        Map<RaftID, LinkedBlockingQueue<MessageDeliverer>> messageQueues = new HashMap<>(SERVER_COUNT);
 
         for (short i = 1; i < SERVER_COUNT+1; i++) {
-            messageQueues.put(i, new LinkedBlockingQueue<>());
+            messageQueues.put(new RaftID(i), new LinkedBlockingQueue<>());
         }
 
-        Map<Short, RaftClientMessage> responseMap = new ConcurrentHashMap<>(1);
+        Map<RaftID, RaftClientMessage> responseMap = new ConcurrentHashMap<>(1);
 
         RaftServer[] servers = new RaftServer[SERVER_COUNT];
         for (short i = 1; i < SERVER_COUNT+1; i++) {
-            servers[i-1] = createTestServer(i, serverIds, clientIds, messageQueues, responseMap);
+            servers[i-1] = createTestServer(new RaftID(i), serverIds, clientIds, messageQueues, responseMap);
         }
 
         for (short i = 1; i < SERVER_COUNT+1; i++) {
             servers[i-1].start();
         }
 
-        RaftContext context = new RaftContext(serverIds, clientIds, (short) (SERVER_COUNT + 1));
+        RaftContext context = new RaftContext(serverIds, clientIds, new RaftID((short) (SERVER_COUNT + 1)));
         RaftClient client = new RaftClient(context, new LocalTestNetworkService(context, messageQueues, responseMap, NETWORK_DELAY_RANDOMIZATION));
 
         while (true) {
@@ -107,8 +108,8 @@ public class Main {
 
     }
 
-    private static RaftServer createTestServer(short id, List<Short> serverIds, List<Short> clientIds, Map<Short, LinkedBlockingQueue<MessageDeliverer>> messageQueues, Map<Short, RaftClientMessage> responseMap) {
-        List<Short> localIds = new ArrayList<>(serverIds);
+    private static RaftServer createTestServer(RaftID id, List<RaftID> serverIds, List<RaftID> clientIds, Map<RaftID, LinkedBlockingQueue<MessageDeliverer>> messageQueues, Map<RaftID, RaftClientMessage> responseMap) {
+        List<RaftID> localIds = new ArrayList<>(serverIds);
         RaftServerContext context = new RaftServerContext(localIds, clientIds, id, FOLLOWER_TIMEOUT_DURATION, FOLLOWER_RANDOMIZATION_AMOUNT, ELECTION_TIMEOUT_DURATION, ELECTION_RANDOMIZATION_AMOUNT, HEARTBEAT_TIMEOUT_DURATION, HEARTBEAT_RANDOMIZATION_AMOUNT);
         ServerNetworkService networkService = new LocalTestNetworkService(context, messageQueues, responseMap, NETWORK_DELAY_RANDOMIZATION);
         return new RaftServer(context, networkService);

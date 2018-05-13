@@ -6,30 +6,30 @@ import java.util.stream.Collectors;
 public class RaftContext {
 
     // List of all servers in cluster acting as raft servers
-    private List<Short> raftServers;
+    private List<RaftID> raftServers;
 
     // List of all servers in cluster acting as raft clients
-    private List<Short> raftClients;
+    private List<RaftID> raftClients;
 
-    private short localId;
+    private RaftID localId;
 
-    public RaftContext(List<Short> raftServers, List<Short> raftClients, short localId) {
+    public RaftContext(List<RaftID> raftServers, List<RaftID> raftClients, RaftID localId) {
         this.localId = localId;
 
         // delete local id from server list or client list
-        this.raftServers = raftServers.stream().filter(id -> id != localId).collect(Collectors.toList());
-        this.raftClients = raftClients.stream().filter(id -> id != localId).collect(Collectors.toList());
+        this.raftServers = raftServers.stream().filter(id -> !id.equals(localId)).collect(Collectors.toList());
+        this.raftClients = raftClients.stream().filter(id -> !id.equals(localId)).collect(Collectors.toList());
     }
 
-    public List<Short> getRaftServers() {
+    public List<RaftID> getRaftServers() {
         return raftServers;
     }
 
-    public List<Short> getRaftClients() {
+    public List<RaftID> getRaftClients() {
         return raftClients;
     }
 
-    public short getLocalId() {
+    public RaftID getLocalId() {
         return localId;
     }
 }

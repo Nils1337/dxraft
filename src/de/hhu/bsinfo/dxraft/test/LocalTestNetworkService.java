@@ -2,6 +2,7 @@ package de.hhu.bsinfo.dxraft.test;
 
 import de.hhu.bsinfo.dxraft.client.ClientNetworkService;
 import de.hhu.bsinfo.dxraft.context.RaftContext;
+import de.hhu.bsinfo.dxraft.context.RaftID;
 import de.hhu.bsinfo.dxraft.message.*;
 import de.hhu.bsinfo.dxraft.server.ServerNetworkService;
 
@@ -15,8 +16,8 @@ import java.util.concurrent.TimeUnit;
 
 public class LocalTestNetworkService extends ServerNetworkService implements ClientNetworkService {
 
-    private Map<Short, LinkedBlockingQueue<MessageDeliverer>> messageQueues;
-    private Map<Short, RaftClientMessage> responseMap;
+    private Map<RaftID, LinkedBlockingQueue<MessageDeliverer>> messageQueues;
+    private Map<RaftID, RaftClientMessage> responseMap;
     private RaftContext context;
     private int networkRandomization;
 
@@ -45,7 +46,7 @@ public class LocalTestNetworkService extends ServerNetworkService implements Cli
         }
     });
 
-    public LocalTestNetworkService(RaftContext context, Map<Short, LinkedBlockingQueue<MessageDeliverer>> messageQueues, Map<Short, RaftClientMessage> responseMap, int networkRandomization) {
+    public LocalTestNetworkService(RaftContext context, Map<RaftID, LinkedBlockingQueue<MessageDeliverer>> messageQueues, Map<RaftID, RaftClientMessage> responseMap, int networkRandomization) {
         this.context = context;
         this.messageQueues = messageQueues;
         this.responseMap = responseMap;

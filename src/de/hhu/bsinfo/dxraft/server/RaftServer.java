@@ -1,5 +1,6 @@
 package de.hhu.bsinfo.dxraft.server;
 
+import de.hhu.bsinfo.dxraft.context.RaftID;
 import de.hhu.bsinfo.dxraft.state.Log;
 import de.hhu.bsinfo.dxraft.message.*;
 import de.hhu.bsinfo.dxraft.state.LogEntry;
@@ -53,7 +54,7 @@ public class RaftServer implements ServerMessageReceiver, TimeoutHandler {
         state.checkTerm(request.getTerm());
 
         VoteResponse response;
-        if ((state.getVotedFor() == 0 || state.getVotedFor() == request.getSenderId()) &&
+        if ((state.getVotedFor() == null || state.getVotedFor() == request.getSenderId()) &&
                 isLogAtLeastAsUpToDateAsLocalLog(request.getLastLogTerm(), request.getLastLogIndex())) {
             response = new VoteResponse(context.getLocalId(), request.getSenderId(), state.getCurrentTerm(), true);
             state.updateVote(request.getSenderId());
@@ -241,7 +242,7 @@ public class RaftServer implements ServerMessageReceiver, TimeoutHandler {
 
                     LOGGER.debug("Server {} got write request and is sending append entries requests to followers!", context.getLocalId());
                     // update logs of all servers
-                    for (short server : context.getRaftServers()) {
+                    for (RaftID server : context.getRaftServers()) {
                         sendAppendEntriesRequest(server);
                     }
                 }
@@ -287,13 +288,13 @@ public class RaftServer implements ServerMessageReceiver, TimeoutHandler {
      * Sends heartbeats to all servers.
      */
     private void sendHeartbeat() {
-        for (short id : context.getRaftServers()) {
+        for (RaftID id : context.getRaftServers()) {
             AppendEntriesRequest request = new AppendEntriesRequest(context.getLocalId(), id, state.getCurrentTerm(), log.getLastIndex(), log.isEmpty() ? -1 : log.getLastEntry().getTerm(), log.getCommitIndex(), null);
             networkService.sendMessage(request);
         }
     }
 
-    private void sendAppendEntriesRequest(short followerId) {
+    private void sendAppendEntriesRequest(RaftID followerId) {
         if (!state.isLeader()) {
             throw new IllegalStateException("Append entries request could not be sent because state is " + state.getState() + " but should be LEADER!");
         }
@@ -309,7 +310,7 @@ public class RaftServer implements ServerMessageReceiver, TimeoutHandler {
      * Sends vote requests to all servers.
      */
     private void sendVoteRequests() {
-        for (short id : context.getRaftServers()) {
+        for (RaftID id : context.getRaftServers()) {
             VoteRequest voteRequest = new VoteRequest(context.getLocalId(), id, state.getCurrentTerm(), log.getLastIndex(), log.getLastIndex() >= 0 ? log.getLastEntry().getTerm() : -1);
             networkService.sendMessage(voteRequest);
         }

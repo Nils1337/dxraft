@@ -1,14 +1,16 @@
 package de.hhu.bsinfo.dxraft.message;
 
-public class ClientRedirection extends RaftClientMessage {
-    private short leaderId;
+import de.hhu.bsinfo.dxraft.context.RaftID;
 
-    public ClientRedirection(short senderId, short receiverId, short leaderId) {
+public class ClientRedirection extends RaftClientMessage {
+    private RaftID leaderId;
+
+    public ClientRedirection(RaftID senderId, RaftID receiverId, RaftID leaderId) {
         super(senderId, receiverId);
         this.leaderId = leaderId;
     }
 
-    public short getLeaderId() {
+    public RaftID getLeaderId() {
         return leaderId;
     }
 }

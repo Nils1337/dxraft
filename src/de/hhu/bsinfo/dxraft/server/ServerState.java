@@ -1,5 +1,6 @@
 package de.hhu.bsinfo.dxraft.server;
 
+import de.hhu.bsinfo.dxraft.context.RaftID;
 import de.hhu.bsinfo.dxraft.state.Log;
 import de.hhu.bsinfo.dxraft.timer.RaftTimer;
 import org.apache.logging.log4j.LogManager;
@@ -25,15 +26,15 @@ public class ServerState {
     //private int lastApplied = 0;
 
     // TODO can servers have id 0?
-    private short votedFor = 0;
-    private short currentLeader = 0;
+    private RaftID votedFor;
+    private RaftID currentLeader;
 
     private RaftTimer timer;
     private RaftServerContext context;
 
-    private Map<Short, Integer> nextIndexMap = new HashMap<>();
-    private Map<Short, Integer> matchIndexMap = new HashMap<>();
-    private Map<Short, Boolean> votesMap = new HashMap<>();
+    private Map<RaftID, Integer> nextIndexMap = new HashMap<>();
+    private Map<RaftID, Integer> matchIndexMap = new HashMap<>();
+    private Map<RaftID, Boolean> votesMap = new HashMap<>();
     private Log log;
 
     public ServerState(RaftServerContext context, RaftTimer timer, Log log) {
@@ -58,15 +59,15 @@ public class ServerState {
         return state;
     }
 
-    public Map<Short, Integer> getNextIndexMap() {
+    public Map<RaftID, Integer> getNextIndexMap() {
         return nextIndexMap;
     }
 
-    public Map<Short, Integer> getMatchIndexMap() {
+    public Map<RaftID, Integer> getMatchIndexMap() {
         return matchIndexMap;
     }
 
-    public Map<Short, Boolean> getVotesMap() {
+    public Map<RaftID, Boolean> getVotesMap() {
         return votesMap;
     }
 
@@ -74,18 +75,18 @@ public class ServerState {
         return currentTerm;
     }
 
-    public void updateLeader(short leaderId) {
+    public void updateLeader(RaftID leaderId) {
         if (state != State.FOLLOWER) {
             throw new IllegalStateException("Server could not set leader because state is " + state.toString() + " but should be FOLOOWER!");
         }
         this.currentLeader = leaderId;
     }
 
-    public short getCurrentLeader() {
+    public RaftID getCurrentLeader() {
         return currentLeader;
     }
 
-    public void updateVote(short votedFor) {
+    public void updateVote(RaftID votedFor) {
         if (state != State.FOLLOWER) {
             throw new IllegalStateException("Server could not set vote because state is " + state.toString() + " but should be FOLLOWER!");
         }
@@ -93,7 +94,7 @@ public class ServerState {
         this.resetTimer();
     }
 
-    public short getVotedFor() {
+    public RaftID getVotedFor() {
         return votedFor;
     }
 
@@ -109,7 +110,7 @@ public class ServerState {
 
         state = State.LEADER;
 
-        for (short serverId : context.getRaftServers()) {
+        for (RaftID serverId : context.getRaftServers()) {
             nextIndexMap.put(serverId, log.getLastIndex() + 1);
             matchIndexMap.put(serverId, 0);
         }
@@ -134,7 +135,7 @@ public class ServerState {
         }
 
         state = State.FOLLOWER;
-        votedFor = 0;
+        votedFor = null;
         resetTimer();
     }
 
@@ -186,7 +187,7 @@ public class ServerState {
         }
 
         currentTerm++;
-        currentLeader = 0;
+        currentLeader = null;
         votesMap.clear();
         votedFor = context.getLocalId();
         resetTimer();
@@ -208,7 +209,7 @@ public class ServerState {
                 resetStateAsFollower();
             }
             currentTerm = term;
-            currentLeader = 0;
+            currentLeader = null;
         }
     }
 
@@ -217,7 +218,7 @@ public class ServerState {
      * @param term
      * @param leader
      */
-    public void checkTerm(int term, short leader) {
+    public void checkTerm(int term, RaftID leader) {
         if (term > currentTerm) {
 
             LOGGER.debug("Server {} converting to Follower because received message with higher term!", context.getLocalId());
