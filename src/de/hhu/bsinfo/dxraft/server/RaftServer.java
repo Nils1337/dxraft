@@ -7,6 +7,7 @@ import de.hhu.bsinfo.dxraft.data.RaftData;
 import de.hhu.bsinfo.dxraft.timer.RaftTimer;
 import de.hhu.bsinfo.dxraft.timer.TimeoutHandler;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -21,7 +22,7 @@ public class RaftServer implements ServerMessageReceiver, TimeoutHandler {
     private Log log = new Log();
 
     private boolean started = false;
-    private Map<LogEntry, ClientRequest> pendingRequests = new HashMap<>();
+    private ArrayList<LogEntry> pendingRequests = new ArrayList<>();
 
     public RaftServer(RaftServerContext context, ServerNetworkService networkService) {
         this.networkService = networkService;
@@ -191,7 +192,8 @@ public class RaftServer implements ServerMessageReceiver, TimeoutHandler {
                     // send responses for every log entry that was handled by this server and is now committed
                     for (int i = currentCommitIndex + 1; i <= newCommitIndex; i++) {
                         LogEntry logEntry = log.get(i);
-                        ClientRequest request = pendingRequests.remove(logEntry);
+                        pendingRequests.remove(logEntry);
+                        ClientRequest request = logEntry.getClientRequest();
 
                         if (request != null) {
                             if (clientRequestDebug) {
@@ -204,6 +206,8 @@ public class RaftServer implements ServerMessageReceiver, TimeoutHandler {
                             } else {
                                 clientResponse = new ClientResponse(context.getLocalId(), request.getSenderId(), true);
                             }
+
+                            logEntry.setClientResponse(clientResponse);
                             networkService.sendMessage(clientResponse);
                         }
                     }
@@ -215,7 +219,6 @@ public class RaftServer implements ServerMessageReceiver, TimeoutHandler {
 
     @Override
     public void processClientRequest(ClientRequest request) {
-
 
         // serve request if server is leader
         if (state.isLeader()) {
@@ -232,18 +235,42 @@ public class RaftServer implements ServerMessageReceiver, TimeoutHandler {
                 networkService.sendMessage(response);
             } else if (request.isWriteRequest() || request.isDeleteRequest()) {
                 // update log
-                LogEntry logEntry = new LogEntry(state.getCurrentTerm(), request.getPath(), request.isWriteRequest() ? LogEntry.LogEntryType.PUT : LogEntry.LogEntryType.DELETE, request.getValue());
-                log.append(logEntry);
+                LogEntry logEntry = new LogEntry(state.getCurrentTerm(), request);
 
-                // save request to later send response
-                pendingRequests.put(logEntry, request);
+                // check if request was already handled before
+                if (log.contains(logEntry)) {
 
-                if (clientRequestDebug) {
-                    System.out.println("Server " + context.getLocalId() + " got write request and is sending append entries requests to followers!");
-                }
-                // update logs of all servers
-                for (short server : context.getRaftServers()) {
-                    sendAppendEntriesRequest(server);
+                    // check if logEntry is a pending request
+                    if (pendingRequests.contains(logEntry)) {
+                        // if request is pending, update the request of the log entry and wait for the request to finish
+                        pendingRequests.get(pendingRequests.indexOf(logEntry)).setClientRequest(request);
+                    } else {
+                        // if request is not pending, get the response that was sent and send it again
+                        LogEntry currentLogEntry = log.get(log.indexOf(logEntry));
+                        ClientResponse clientResponse = currentLogEntry.getClientResponse();
+
+                        if (clientResponse == null) {
+                            // this should not happen
+                            if (clientRequestDebug) {
+                                System.out.println("Server " + context.getLocalId() + " got request with already existent id which is not pending and hast no response associated to it!");
+                            }
+                        } else {
+                            networkService.sendMessage(clientResponse);
+                        }
+                    }
+                } else {
+                    log.append(logEntry);
+
+                    // save request to later send response
+                    pendingRequests.add(logEntry);
+
+                    if (clientRequestDebug) {
+                        System.out.println("Server " + context.getLocalId() + " got write request and is sending append entries requests to followers!");
+                    }
+                    // update logs of all servers
+                    for (short server : context.getRaftServers()) {
+                        sendAppendEntriesRequest(server);
+                    }
                 }
             }
 

@@ -3,7 +3,7 @@ package de.hhu.bsinfo.dxraft.state;
 import java.util.ArrayList;
 import java.util.List;
 
-public class Log {
+public class Log extends ArrayList<LogEntry> {
 
     private List<LogEntry> log = new ArrayList<>();
     private StateMachine stateMachine = new StateMachine();
@@ -33,12 +33,20 @@ public class Log {
         return log.get(index);
     }
 
+    public int indexOf(LogEntry logEntry) {
+        return log.indexOf(logEntry);
+    }
+
     public StateMachine getStateMachine() {
         return stateMachine;
     }
 
     public int getCommitIndex() {
         return commitIndex;
+    }
+
+    public boolean contains(LogEntry logEntry) {
+        return log.contains(logEntry);
     }
 
     public void updateCommitIndex(int newCommitIndex) {

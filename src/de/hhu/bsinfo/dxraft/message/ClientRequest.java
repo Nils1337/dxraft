@@ -3,6 +3,9 @@ package de.hhu.bsinfo.dxraft.message;
 import de.hhu.bsinfo.dxraft.server.ServerMessageReceiver;
 import de.hhu.bsinfo.dxraft.data.RaftData;
 
+import java.util.Objects;
+import java.util.UUID;
+
 public class ClientRequest extends RaftMessage implements MessageDeliverer {
 
     public enum RequestType {
@@ -12,11 +15,13 @@ public class ClientRequest extends RaftMessage implements MessageDeliverer {
     private RequestType requestType;
     private String path;
     private RaftData value;
+    private UUID id;
 
     public ClientRequest(short senderId, short receiverId, RequestType requestType, String path) {
         super(senderId, receiverId);
         this.requestType = requestType;
         this.path = path;
+        id = UUID.randomUUID();
     }
 
     public ClientRequest(short senderId, short receiverId, RequestType requestType, String path, RaftData value) {
@@ -24,6 +29,7 @@ public class ClientRequest extends RaftMessage implements MessageDeliverer {
         this.requestType = requestType;
         this.path = path;
         this.value = value;
+        id = UUID.randomUUID();
     }
 
     public RequestType getRequestType() {
@@ -61,5 +67,22 @@ public class ClientRequest extends RaftMessage implements MessageDeliverer {
 
     public void setReceiverId(short receiverId) {
         this.receiverId = receiverId;
+    }
+
+    public UUID getId() {
+        return id;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        ClientRequest request = (ClientRequest) o;
+        return Objects.equals(id, request.id);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(id);
     }
 }
