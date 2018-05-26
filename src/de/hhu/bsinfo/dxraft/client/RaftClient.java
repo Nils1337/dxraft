@@ -1,15 +1,23 @@
 package de.hhu.bsinfo.dxraft.client;
 
+import de.hhu.bsinfo.dxraft.context.RaftAddress;
 import de.hhu.bsinfo.dxraft.context.RaftContext;
 import de.hhu.bsinfo.dxraft.context.RaftID;
+import de.hhu.bsinfo.dxraft.data.StringData;
 import de.hhu.bsinfo.dxraft.message.ClientRedirection;
 import de.hhu.bsinfo.dxraft.message.ClientRequest;
 import de.hhu.bsinfo.dxraft.message.ClientResponse;
 import de.hhu.bsinfo.dxraft.message.RaftClientMessage;
 import de.hhu.bsinfo.dxraft.data.RaftData;
+import de.hhu.bsinfo.dxraft.server.RaftServer;
+import de.hhu.bsinfo.dxraft.server.RaftServerContext;
+import de.hhu.bsinfo.dxraft.test.DatagramNetworkService;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Scanner;
 import java.util.concurrent.ThreadLocalRandom;
 
 public class RaftClient {
@@ -28,7 +36,12 @@ public class RaftClient {
         this.networkService = networkService;
     }
 
-    public Object read(String path) {
+    public RaftClient(RaftContext context) {
+        this.context = context;
+        this.networkService = new DatagramNetworkService(context);
+    }
+
+    public RaftData read(String path) {
         ClientResponse response = sendRequest(ClientRequest.RequestType.GET, path, null);
         if (response != null) {
             return response.getValue();
@@ -97,5 +110,69 @@ public class RaftClient {
         return null;
     }
 
+
+    public static void main(String[] args) {
+        short id = 3;
+
+        List<RaftAddress> servers = new ArrayList<>();
+        for (int i = 0; i < 3; i++) {
+            servers.add(new RaftAddress(new RaftID((short) i), "127.0.0.1", 5000 + i));
+        }
+
+        List<RaftAddress> clients = new ArrayList<>();
+        clients.add(new RaftAddress(new RaftID(id), "127.0.0.1", 6000));
+
+        RaftAddress localAddress = new RaftAddress(new RaftID(id), "127.0.0.1", 6000);
+        RaftContext context = new RaftContext(servers, clients, localAddress);
+
+        RaftClient client = new RaftClient(context);
+
+        while (true) {
+            System.out.print(">> ");
+            Scanner scanner = new Scanner(System.in);
+            String in = scanner.nextLine();
+
+            if (in.startsWith("read")) {
+                String[] strings = in.split(" ");
+                if (strings.length > 1) {
+                    RaftData result = client.read(strings[1]);
+                    if (result != null) {
+                        System.out.println(result.toString());
+                    } else {
+                        System.out.println("Could not read path!");
+                    }
+                } else {
+                    System.out.println("invalid operation!");
+                }
+            } else if (in.startsWith("write")) {
+                String[] strings = in.split(" ");
+                if (strings.length > 2) {
+                    boolean result = client.write(strings[1], new StringData(strings[2]));
+                    if (result) {
+                        System.out.println("Write successful!");
+                    } else {
+                        System.out.println("Write not successful!");
+                    }
+                } else {
+                    System.out.println("invalid operation!");
+                }
+            } else if (in.startsWith("delete")) {
+                String[] strings = in.split(" ");
+                if (strings.length > 1) {
+                    Object result = client.delete(strings[1]);
+                    if (result != null) {
+                        System.out.println("Deletion of " + result + " under \"" + strings[1] + "\" was successful!");
+                    } else {
+                        System.out.println("Deletion failed!");
+                    }
+                } else {
+                    System.out.println("invalid operation!");
+                }
+            } else {
+                System.out.println("invalid operation!");
+            }
+
+        }
+    }
 
 }

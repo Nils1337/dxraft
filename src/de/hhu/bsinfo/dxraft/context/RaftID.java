@@ -1,8 +1,9 @@
 package de.hhu.bsinfo.dxraft.context;
 
+import java.io.Serializable;
 import java.util.Objects;
 
-public class RaftID {
+public class RaftID implements Serializable {
     private short id;
 
     public RaftID (short id) {

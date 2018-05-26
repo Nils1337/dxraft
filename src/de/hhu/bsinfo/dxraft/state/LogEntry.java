@@ -4,9 +4,10 @@ import de.hhu.bsinfo.dxraft.data.RaftData;
 import de.hhu.bsinfo.dxraft.message.ClientRequest;
 import de.hhu.bsinfo.dxraft.message.ClientResponse;
 
+import java.io.Serializable;
 import java.util.Objects;
 
-public class LogEntry {
+public class LogEntry implements Serializable {
     public enum LogEntryType {
         PUT, DELETE
     }

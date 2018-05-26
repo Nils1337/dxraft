@@ -3,7 +3,9 @@ package de.hhu.bsinfo.dxraft.message;
 import de.hhu.bsinfo.dxraft.context.RaftID;
 import de.hhu.bsinfo.dxraft.server.ServerMessageReceiver;
 
-public class RaftMessage {
+import java.io.Serializable;
+
+public class RaftMessage implements Serializable {
     protected RaftID senderId;
     protected RaftID receiverId;
 

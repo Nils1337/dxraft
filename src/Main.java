@@ -31,7 +31,7 @@ public class Main {
 
     public static void main(String[] args) {
 
-        List<RaftID> serverIds = new ArrayList<>();
+        /*List<RaftID> serverIds = new ArrayList<>();
         for (short i = 1; i < SERVER_COUNT+1; i++) {
             serverIds.add(new RaftID(i));
         }
@@ -104,14 +104,14 @@ public class Main {
                 System.out.println("invalid operation!");
             }
 
-        }
+        }*/
 
     }
 
-    private static RaftServer createTestServer(RaftID id, List<RaftID> serverIds, List<RaftID> clientIds, Map<RaftID, LinkedBlockingQueue<MessageDeliverer>> messageQueues, Map<RaftID, RaftClientMessage> responseMap) {
+   /* private static RaftServer createTestServer(RaftID id, List<RaftID> serverIds, List<RaftID> clientIds, Map<RaftID, LinkedBlockingQueue<MessageDeliverer>> messageQueues, Map<RaftID, RaftClientMessage> responseMap) {
         List<RaftID> localIds = new ArrayList<>(serverIds);
         RaftServerContext context = new RaftServerContext(localIds, clientIds, id, FOLLOWER_TIMEOUT_DURATION, FOLLOWER_RANDOMIZATION_AMOUNT, ELECTION_TIMEOUT_DURATION, ELECTION_RANDOMIZATION_AMOUNT, HEARTBEAT_TIMEOUT_DURATION, HEARTBEAT_RANDOMIZATION_AMOUNT);
         ServerNetworkService networkService = new LocalTestNetworkService(context, messageQueues, responseMap, NETWORK_DELAY_RANDOMIZATION);
         return new RaftServer(context, networkService);
-    }
+    }*/
 }

@@ -1,5 +1,6 @@
 package de.hhu.bsinfo.dxraft.server;
 
+import de.hhu.bsinfo.dxraft.context.RaftAddress;
 import de.hhu.bsinfo.dxraft.context.RaftContext;
 import de.hhu.bsinfo.dxraft.context.RaftID;
 
@@ -19,7 +20,7 @@ public class RaftServerContext extends RaftContext {
     private int heartbeatTimeoutDuration;
     private int heartbeatRandomizationAmount;
 
-    public RaftServerContext(List<RaftID> raftServers, List<RaftID> raftClients, RaftID localId, int followerTimeoutDuration, int followerRandomizationAmount, int electionTimeoutDuration, int electionRandomizationAmount, int heartbeatTimeoutDuration, int heartbeatRandomizationAmount) {
+    public RaftServerContext(List<RaftAddress> raftServers, List<RaftAddress> raftClients, RaftAddress localId, int followerTimeoutDuration, int followerRandomizationAmount, int electionTimeoutDuration, int electionRandomizationAmount, int heartbeatTimeoutDuration, int heartbeatRandomizationAmount) {
         super(raftServers, raftClients, localId);
         this.followerTimeoutDuration = followerTimeoutDuration;
         this.followerRandomizationAmount = followerRandomizationAmount;

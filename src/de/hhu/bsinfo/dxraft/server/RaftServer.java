@@ -1,18 +1,34 @@
 package de.hhu.bsinfo.dxraft.server;
 
+import de.hhu.bsinfo.dxraft.context.RaftAddress;
+import de.hhu.bsinfo.dxraft.context.RaftContext;
 import de.hhu.bsinfo.dxraft.context.RaftID;
 import de.hhu.bsinfo.dxraft.state.Log;
 import de.hhu.bsinfo.dxraft.message.*;
 import de.hhu.bsinfo.dxraft.state.LogEntry;
 import de.hhu.bsinfo.dxraft.data.RaftData;
+import de.hhu.bsinfo.dxraft.test.DatagramNetworkService;
 import de.hhu.bsinfo.dxraft.timer.RaftTimer;
 import de.hhu.bsinfo.dxraft.timer.TimeoutHandler;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import java.util.ArrayList;
+import java.util.List;
 
 public class RaftServer implements ServerMessageReceiver, TimeoutHandler {
+
+    // timeout duration and randomization amount when following leader
+    private static final int FOLLOWER_TIMEOUT_DURATION = 500;
+    private static final int FOLLOWER_RANDOMIZATION_AMOUNT = 50;
+
+    // timeout duration and randomization amount when electing
+    private static final int ELECTION_TIMEOUT_DURATION = 500;
+    private static final int ELECTION_RANDOMIZATION_AMOUNT = 50;
+
+    // timeout duration and randomization amount of leader
+    private static final int HEARTBEAT_TIMEOUT_DURATION = 100;
+    private static final int HEARTBEAT_RANDOMIZATION_AMOUNT = 0;
 
     private static final Logger LOGGER = LogManager.getLogger();
 
@@ -29,6 +45,14 @@ public class RaftServer implements ServerMessageReceiver, TimeoutHandler {
 
     public RaftServer(RaftServerContext context, ServerNetworkService networkService) {
         this.networkService = networkService;
+        networkService.setMessageReceiver(this);
+        this.context = context;
+        RaftTimer timer = new RaftTimer(context,this);
+        state = new ServerState(context, timer, log);
+    }
+
+    public RaftServer(RaftServerContext context) {
+        this.networkService = new DatagramNetworkService(context);
         networkService.setMessageReceiver(this);
         this.context = context;
         RaftTimer timer = new RaftTimer(context,this);
@@ -341,5 +365,28 @@ public class RaftServer implements ServerMessageReceiver, TimeoutHandler {
             }
         }
         return newCommitIndex;
+    }
+
+
+    public static void main(String[] args) {
+        if (args.length < 1) {
+            System.out.println("Id must be provided");
+            return;
+        }
+
+        short id = Short.parseShort(args[0]);
+        List<RaftAddress> servers = new ArrayList<>();
+        for (int i = 0; i < 3; i++) {
+            servers.add(new RaftAddress(new RaftID((short) i), "127.0.0.1", 5000 + i));
+        }
+
+        List<RaftAddress> clients = new ArrayList<>();
+        clients.add(new RaftAddress(new RaftID((short) 3), "127.0.0.1", 6000));
+
+        RaftAddress localAddress = new RaftAddress(new RaftID(id), "127.0.0.1", 5000 + id);
+        RaftServerContext context = new RaftServerContext(servers, clients, localAddress, FOLLOWER_TIMEOUT_DURATION, FOLLOWER_RANDOMIZATION_AMOUNT, ELECTION_TIMEOUT_DURATION, ELECTION_RANDOMIZATION_AMOUNT, HEARTBEAT_TIMEOUT_DURATION, HEARTBEAT_RANDOMIZATION_AMOUNT);
+
+        RaftServer server = new RaftServer(context);
+        server.start();
     }
 }
