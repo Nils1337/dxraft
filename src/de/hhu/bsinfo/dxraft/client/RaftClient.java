@@ -59,13 +59,13 @@ public class RaftClient {
         return false;
     }
 
-    public Object delete(String path) {
+    public boolean delete(String path) {
         ClientResponse response = sendRequest(ClientRequest.RequestType.DELETE, path, null);
         if (response != null) {
-            return response.getValue();
+            return response.isSuccess();
         }
 
-        return null;
+        return false;
     }
 
     private ClientResponse sendRequest(ClientRequest.RequestType requestType, String path, RaftData value) {
@@ -159,9 +159,9 @@ public class RaftClient {
             } else if (in.startsWith("delete")) {
                 String[] strings = in.split(" ");
                 if (strings.length > 1) {
-                    Object result = client.delete(strings[1]);
-                    if (result != null) {
-                        System.out.println("Deletion of " + result + " under \"" + strings[1] + "\" was successful!");
+                    boolean result = client.delete(strings[1]);
+                    if (result) {
+                        System.out.println("Deletion of \"" + strings[1] + "\" was successful!");
                     } else {
                         System.out.println("Deletion failed!");
                     }

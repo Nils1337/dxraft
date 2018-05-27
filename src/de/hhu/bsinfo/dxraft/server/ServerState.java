@@ -210,6 +210,7 @@ public class ServerState {
             }
             currentTerm = term;
             currentLeader = null;
+            votedFor = null;
         }
     }
 
