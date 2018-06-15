@@ -197,28 +197,29 @@ public class ServerState {
      * Checks if the term of the message is higher than the local term. If this is the case, state is changed to follower.
      * @param term
      */
-    public void checkTerm(int term) {
-        if (term > currentTerm) {
-
-            // if server receives message with higher term it has to convert to follower
-            // if it already is a follower, only reset the timer and clear the current vote
-            if (state != State.FOLLOWER) {
-                LOGGER.debug("Server {} converting to Follower because received message with higher term!", context.getLocalId());
-                convertStateToFollower();
-            } else {
-                resetStateAsFollower();
-            }
-            currentTerm = term;
-            currentLeader = null;
-            votedFor = null;
+    public void updateTerm(int term) {
+        if (term < currentTerm) {
+            throw new IllegalArgumentException("Decreasing the term must never happen!");
         }
+
+        // if server receives message with higher term it has to convert to follower
+        // if it already is a follower, only reset the timer and clear the current vote
+        if (state != State.FOLLOWER) {
+            LOGGER.debug("Server {} converting to Follower because received message with higher term!", context.getLocalId());
+            convertStateToFollower();
+        } else {
+            resetStateAsFollower();
+        }
+        currentTerm = term;
+        currentLeader = null;
+        votedFor = null;
     }
 
-    /**
+/*    *//**
      * Checks if the term of the message is higher than the local term. If this is the case, state is changed to follower. Also updates the leader to the provided leader id.
      * @param term
      * @param leader
-     */
+     *//*
     public void checkTerm(int term, RaftID leader) {
         if (term > currentTerm) {
 
@@ -234,5 +235,5 @@ public class ServerState {
             currentTerm = term;
             currentLeader = leader;
         }
-    }
+    }*/
 }

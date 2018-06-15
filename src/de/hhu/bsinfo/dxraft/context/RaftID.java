@@ -10,6 +10,10 @@ public class RaftID implements Serializable {
         this.id = id;
     }
 
+    public RaftID (int id) {
+        this.id = (short) id;
+    }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;

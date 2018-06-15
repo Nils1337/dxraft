@@ -68,6 +68,11 @@ public class LocalTestNetworkService extends ServerNetworkService implements Cli
     }
 
     @Override
+    public void sendMessageToAllServers(RaftMessage message) {
+
+    }
+
+    @Override
     public void start() {
         messagePollingThread.start();
     }

@@ -11,9 +11,8 @@ public class RaftTimer {
     private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
     private ScheduledFuture timeoutFuture;
 
-    public RaftTimer(RaftContext context, TimeoutHandler timeoutHandler) {
+    public RaftTimer(RaftContext context) {
         this.context = context;
-        this.timeoutHandler = timeoutHandler;
     }
 
     public void cancel() {
@@ -24,6 +23,9 @@ public class RaftTimer {
     }
 
     public void schedule(int timeoutInMilliseconds, int randomizationAmountInMilliseconds) {
+        if (timeoutHandler == null) {
+            throw new RuntimeException("Timeout handler was not set!");
+        }
 
         int randomizedTimeout = timeoutInMilliseconds;
 
@@ -37,5 +39,9 @@ public class RaftTimer {
                 timeoutHandler.processTimeout();
             }
         }, randomizedTimeout, TimeUnit.MILLISECONDS);
+    }
+
+    public void setTimeoutHandler(TimeoutHandler timeoutHandler) {
+        this.timeoutHandler = timeoutHandler;
     }
 }

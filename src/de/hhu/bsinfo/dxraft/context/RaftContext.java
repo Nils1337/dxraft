@@ -2,6 +2,7 @@ package de.hhu.bsinfo.dxraft.context;
 
 import de.hhu.bsinfo.dxraft.server.RaftServer;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -16,11 +17,12 @@ public class RaftContext {
     private RaftAddress localAddress;
 
     public RaftContext(List<RaftAddress> raftServers, List<RaftAddress> raftClients, RaftAddress localAddress) {
+        if (localAddress == null) {
+            throw new IllegalArgumentException("Local Address must not be null!");
+        }
         this.localAddress = localAddress;
-
-        // delete local id from server list or client list
-        this.raftServers = raftServers.stream().filter(addr -> !addr.equals(localAddress)).collect(Collectors.toList());
-        this.raftClients = raftClients.stream().filter(addr-> !addr.equals(localAddress)).collect(Collectors.toList());
+        this.raftServers = raftServers;
+        this.raftClients = raftClients;
     }
 
     public List<RaftID> getRaftServers() {
@@ -53,4 +55,9 @@ public class RaftContext {
     public RaftAddress getLocalAddress() {
         return localAddress;
     }
+
+    public int getServerCount() {
+        return raftServers.size();
+    }
+
 }

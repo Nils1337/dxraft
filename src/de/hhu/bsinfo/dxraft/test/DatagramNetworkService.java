@@ -3,6 +3,7 @@ package de.hhu.bsinfo.dxraft.test;
 import de.hhu.bsinfo.dxraft.client.ClientNetworkService;
 import de.hhu.bsinfo.dxraft.context.RaftAddress;
 import de.hhu.bsinfo.dxraft.context.RaftContext;
+import de.hhu.bsinfo.dxraft.context.RaftID;
 import de.hhu.bsinfo.dxraft.message.*;
 import de.hhu.bsinfo.dxraft.server.ServerNetworkService;
 
@@ -56,6 +57,14 @@ public class DatagramNetworkService extends ServerNetworkService implements Clie
             socket.send(new DatagramPacket(msg, msg.length, socketAddress));
         } catch (IOException e) {
             e.printStackTrace();
+        }
+    }
+
+    @Override
+    public void sendMessageToAllServers(RaftMessage message) {
+        for (RaftID id : context.getRaftServers()) {
+            message.setReceiverId(id);
+            sendMessage(message);
         }
     }
 

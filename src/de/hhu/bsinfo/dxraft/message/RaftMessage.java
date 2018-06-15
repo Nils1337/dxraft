@@ -22,4 +22,11 @@ public class RaftMessage implements Serializable {
         return receiverId;
     }
 
+    public void setSenderId(RaftID senderId) {
+        this.senderId = senderId;
+    }
+
+    public void setReceiverId(RaftID receiverId) {
+        this.receiverId = receiverId;
+    }
 }

@@ -8,6 +8,8 @@ public abstract class ServerNetworkService {
 
     abstract public void sendMessage(RaftMessage message);
 
+    abstract public void sendMessageToAllServers(RaftMessage message);
+
     abstract public void start();
 
     abstract public void stop();

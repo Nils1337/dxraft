@@ -27,9 +27,11 @@ public class LogEntry implements Serializable {
             case DELETE:
                 logEntryType = LogEntryType.DELETE;
                 break;
-            default:
-                throw new IllegalArgumentException("Request must be a write request!");
         }
+    }
+
+    public LogEntry(int term) {
+        this.term = term;
     }
 
 //    public void setValue(RaftData value) {
