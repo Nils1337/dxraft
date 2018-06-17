@@ -18,7 +18,7 @@ import spock.lang.Shared
 import spock.lang.Specification
 import spock.lang.Unroll
 
-class RaftServerTest extends Specification {
+class RaftServerSpec extends Specification {
 
     def context = Mock(RaftServerContext)
     def netService = Mock(ServerNetworkService)
@@ -311,13 +311,4 @@ class RaftServerTest extends Specification {
             1 * netService.sendMessage({response ->
                 response.is(prevResponse)})
     }
-
-    /*def "test processTimeout"() {
-        given:
-
-        when:
-        // TODO implement stimulus
-        then:
-        // TODO implement assertions
-    }*/
 }

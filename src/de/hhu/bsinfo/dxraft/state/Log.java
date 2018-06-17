@@ -61,7 +61,7 @@ public class Log extends ArrayList<LogEntry> {
             throw new IllegalArgumentException("The commit index must never be decreased!");
         }
 
-        if (commitIndex >= log.size()) {
+        if (newCommitIndex >= log.size()) {
             throw new IllegalArgumentException("Cannot commit index that is not logged");
         }
 
@@ -92,7 +92,6 @@ public class Log extends ArrayList<LogEntry> {
                 log.subList(currentIndex, log.size()-1).clear();
                 log.add(newEntries.get(i));
                 continue;
-                //deleteAfter(prevLogIndex + i);
             }
 
             log.set(currentIndex, newEntries.get(i));
