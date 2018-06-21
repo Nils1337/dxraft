@@ -9,7 +9,7 @@ import java.util.Map;
 public class Log extends ArrayList<LogEntry> {
 
     private List<LogEntry> log = new ArrayList<>();
-    private StateMachine stateMachine = new StateMachine();
+    private StateMachine stateMachine;
     private int commitIndex = -1;
 
     public void append(LogEntry logEntry) {
@@ -78,6 +78,10 @@ public class Log extends ArrayList<LogEntry> {
     }
 
     public void updateLog(int prevLogIndex, List<LogEntry> newEntries) {
+        if (prevLogIndex < commitIndex) {
+            throw new IllegalArgumentException("Cannot update already committed entries!");
+        }
+
         for (int i = 0; i < newEntries.size(); i++) {
 
             int currentIndex = prevLogIndex + 1 + i;
@@ -89,7 +93,7 @@ public class Log extends ArrayList<LogEntry> {
             LogEntry prevEntry = log.get(prevLogIndex + 1 + i);
 
             if (prevEntry != null && prevEntry.getTerm() != newEntries.get(i).getTerm()) {
-                log.subList(currentIndex, log.size()-1).clear();
+                log.subList(currentIndex, log.size()).clear();
                 log.add(newEntries.get(i));
                 continue;
             }
@@ -130,4 +134,25 @@ public class Log extends ArrayList<LogEntry> {
         return newCommitIndex;
     }
 
+    public static final class LogBuilder {
+        private StateMachine stateMachine = new StateMachine();
+
+        private LogBuilder() {
+        }
+
+        public static LogBuilder aLog() {
+            return new LogBuilder();
+        }
+
+        public LogBuilder withStateMachine(StateMachine stateMachine) {
+            this.stateMachine = stateMachine;
+            return this;
+        }
+
+        public Log build() {
+            Log log = new Log();
+            log.stateMachine = this.stateMachine;
+            return log;
+        }
+    }
 }

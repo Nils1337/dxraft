@@ -1,22 +1,35 @@
 package de.hhu.bsinfo.dxraft.server
 
+import de.hhu.bsinfo.dxraft.context.RaftID
 import de.hhu.bsinfo.dxraft.state.Log
 import de.hhu.bsinfo.dxraft.state.LogEntry
+import de.hhu.bsinfo.dxraft.state.StateMachine
+import spock.lang.Shared
 import spock.lang.Specification
 
 
 class LogSpec extends Specification {
 
-    def log = new Log()
+    def stateMachine = Mock(StateMachine)
+    def log = Log.LogBuilder.aLog()
+            .withStateMachine(stateMachine)
+            .build()
     def logEntries = []
 
     def setupLog() {
         3.times {
-            def entry = Mock(LogEntry)
+            def entry = new LogEntry(it+1)
             logEntries.push(entry)
             log.append(entry)
         }
     }
+
+    @Shared
+    def id1 = new RaftID(1)
+    @Shared
+    def id2 = new RaftID(2)
+    @Shared
+    def id3 = new RaftID(3)
 
     def "test log state"() {
         setup:
@@ -59,10 +72,7 @@ class LogSpec extends Specification {
 
     def "test up to date check"() {
         setup:
-            3.times {
-                def entry = new LogEntry(it+1)
-                log.append(entry)
-            }
+            setupLog()
         expect:
             log.isAtLeastAsUpToDateAs(lastTerm, lastIndex) == upd
         where:
@@ -72,6 +82,87 @@ class LogSpec extends Specification {
             3 | 4 || true
             5 | 1 || true
             4 | 4 || true
+    }
+
+    def "test differing check with empty log"() {
+        expect:
+            log.isDiffering(prevIndex, prevTerm) == dif
+        where:
+            prevIndex | prevTerm || dif
+            1 | 1 || true
+            0 | 3 || true
+            -1 | -1 || false
+    }
+
+    def "test differing check"() {
+        setup:
+            setupLog()
+        expect:
+            log.isDiffering(prevIndex, prevTerm) == dif
+        where:
+            prevIndex | prevTerm || dif
+            1 | 1 || true
+            1 | 3 || true
+            1 | 2 || false
+            5 | 1 || true
+    }
+
+    def "test calculation of new commit index"() {
+        setup:
+            def matchIndexMap = [(id1): 3, (id2): 2, (id3): 1]
+            setupLog()
+        expect:
+            log.getNewCommitIndex(matchIndexMap, serverCount, currentTerm) == newCommitIndex
+        where:
+            serverCount | currentTerm || newCommitIndex
+            5 | 2 || 1
+            5 | 3 || -1
+            3 | 3 || 2
+            3 | 2 || 1
+    }
+
+    def setupUpdateLogTest() {
+        setupLog()
+        log.updateCommitIndex(0)
+        def newEntries = (1..3).collect({new LogEntry(it+2)})
+        return newEntries
+    }
+
+    def "test update log 1"() {
+        setup:
+            def newEntries = setupUpdateLogTest()
+        when:
+            log.updateLog(-1, newEntries)
+        then:
+            thrown(IllegalArgumentException)
+    }
+
+    def "test update log 2"() {
+        setup:
+            def newEntries = setupUpdateLogTest()
+        when:
+            log.updateLog(0, newEntries)
+        then:
+            log.getSize() == 4
+            log.get(0).is(logEntries[0])
+            3.times {
+                log.get(it+1).is(newEntries[it])
+            }
+    }
+
+    def "test update log 3"() {
+        setup:
+            def newEntries = setupUpdateLogTest()
+        when:
+            log.updateLog(2, newEntries)
+        then:
+            log.getSize() == 6
+            3.times {
+                log.get(it).is(logEntries[it])
+            }
+            3.times {
+                log.get(it+3).is(newEntries[it])
+            }
     }
 
 }

@@ -407,7 +407,7 @@ public class RaftServer implements ServerMessageReceiver, TimeoutHandler {
         private ServerNetworkService networkService;
         private RaftServerContext context;
         private ServerState state;
-        private Log log = new Log();
+        private Log log;
         private RaftTimer timer;
 
         private RaftServerBuilder() {
@@ -445,6 +445,10 @@ public class RaftServer implements ServerMessageReceiver, TimeoutHandler {
         public RaftServer build() {
             if (context == null) {
                 throw new IllegalArgumentException("Context must be provided!");
+            }
+
+            if (log == null) {
+                log = Log.LogBuilder.aLog().build();
             }
 
             if (networkService == null) {
