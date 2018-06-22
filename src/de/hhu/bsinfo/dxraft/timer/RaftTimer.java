@@ -1,24 +1,42 @@
 package de.hhu.bsinfo.dxraft.timer;
 
 import de.hhu.bsinfo.dxraft.context.RaftContext;
+import de.hhu.bsinfo.dxraft.server.RaftServerContext;
+import de.hhu.bsinfo.dxraft.server.ServerState;
 
 import java.util.concurrent.*;
 
+import static de.hhu.bsinfo.dxraft.server.ServerState.State.FOLLOWER;
+
 public class RaftTimer {
 
-    private RaftContext context;
+    private RaftServerContext context;
     private TimeoutHandler timeoutHandler;
     private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
     private ScheduledFuture timeoutFuture;
 
-    public RaftTimer(RaftContext context) {
+    public RaftTimer(RaftServerContext context) {
         this.context = context;
     }
 
     public void cancel() {
         if (timeoutFuture != null && !timeoutFuture.isDone()) {
-            // TODO interrupt?
-            timeoutFuture.cancel(false);
+            // Timer thread might already be running.
+            // It can be interrupted if it's waiting for lock on the RaftServer instance
+            timeoutFuture.cancel(true);
+        }
+    }
+
+    public void reset(ServerState.State newState) {
+        switch (newState) {
+            case FOLLOWER:
+                schedule(context.getFollowerTimeoutDuration(), context.getFollowerRandomizationAmount());
+                break;
+            case CANDIDATE:
+                schedule(context.getElectionTimeoutDuration(), context.getElectionRandomizationAmount());
+                break;
+            case LEADER:
+                schedule(context.getHeartbeatTimeoutDuration(), context.getHeartbeatRandomizationAmount());
         }
     }
 

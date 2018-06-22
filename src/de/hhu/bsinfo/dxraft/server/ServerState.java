@@ -13,29 +13,27 @@ public class ServerState {
 
     private static final Logger LOGGER = LogManager.getLogger();
 
-    private enum State {
+    public enum State {
         FOLLOWER, CANDIDATE, LEADER
     }
 
     /* persistent context */
     // TODO persist
-    private State state = State.FOLLOWER;
     private int currentTerm = 0;
+    private RaftID votedFor;
+    private Log log;
 
     /* volatile context */
     //private int lastApplied = 0;
 
-    // TODO can servers have id 0?
-    private RaftID votedFor;
     private RaftID currentLeader;
-
+    private State state = State.FOLLOWER;
     private RaftTimer timer;
     private RaftServerContext context;
 
     private Map<RaftID, Integer> nextIndexMap = new HashMap<>();
     private Map<RaftID, Integer> matchIndexMap = new HashMap<>();
     private Map<RaftID, Boolean> votesMap = new HashMap<>();
-    private Log log;
 
     public ServerState(RaftServerContext context, RaftTimer timer, Log log) {
         this.context = context;
@@ -91,7 +89,7 @@ public class ServerState {
             throw new IllegalStateException("Server could not set vote because state is " + state.toString() + " but should be FOLLOWER!");
         }
         this.votedFor = votedFor;
-        this.resetTimer();
+        timer.reset(state);
     }
 
     public RaftID getVotedFor() {
@@ -115,7 +113,7 @@ public class ServerState {
             matchIndexMap.put(serverId, 0);
         }
 
-        resetTimer();
+        timer.reset(state);
     }
 
     public void resetStateAsLeader() {
@@ -123,7 +121,7 @@ public class ServerState {
             throw new IllegalStateException("Server could not be reset because state is " + state.toString() + " but should be LEADER!");
         }
 
-        resetTimer();
+        timer.reset(state);
     }
 
     /**
@@ -136,7 +134,7 @@ public class ServerState {
 
         state = State.FOLLOWER;
         votedFor = null;
-        resetTimer();
+        timer.reset(state);
     }
 
     public void resetStateAsFollower() {
@@ -144,28 +142,7 @@ public class ServerState {
             throw new IllegalStateException("Server could not be reset because state is " + state.toString() + " but should be FOLLOWER!");
         }
 
-        resetTimer();
-    }
-
-    /**
-     * Resets the timer. The timeout duration is dependent on the current status.
-     */
-    private void resetTimer() {
-        timer.cancel();
-        startTimer();
-    }
-
-    public void startTimer() {
-        switch (state) {
-            case FOLLOWER:
-                timer.schedule(context.getFollowerTimeoutDuration(), context.getFollowerRandomizationAmount());
-                break;
-            case CANDIDATE:
-                timer.schedule(context.getElectionTimeoutDuration(), context.getElectionRandomizationAmount());
-                break;
-            case LEADER:
-                timer.schedule(context.getHeartbeatTimeoutDuration(), context.getHeartbeatRandomizationAmount());
-        }
+        timer.reset(state);
     }
 
     /**
@@ -190,7 +167,7 @@ public class ServerState {
         currentLeader = null;
         votesMap.clear();
         votedFor = context.getLocalId();
-        resetTimer();
+        timer.reset(state);
     }
 
     /**
@@ -215,25 +192,7 @@ public class ServerState {
         votedFor = null;
     }
 
-/*    *//**
-     * Checks if the term of the message is higher than the local term. If this is the case, state is changed to follower. Also updates the leader to the provided leader id.
-     * @param term
-     * @param leader
-     *//*
-    public void checkTerm(int term, RaftID leader) {
-        if (term > currentTerm) {
-
-            LOGGER.debug("Server {} converting to Follower because received message with higher term!", context.getLocalId());
-
-            // if server receives message with higher term it has to convert to follower
-            // if it already is a follower, only reset the timer and clear the current vote
-            if (state != State.FOLLOWER) {
-                convertStateToFollower();
-            } else {
-                resetStateAsFollower();
-            }
-            currentTerm = term;
-            currentLeader = leader;
-        }
-    }*/
+    public void startTimer() {
+        timer.reset(state);
+    }
 }
