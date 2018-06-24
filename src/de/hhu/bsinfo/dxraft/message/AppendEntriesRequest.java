@@ -6,15 +6,15 @@ import de.hhu.bsinfo.dxraft.server.ServerMessageReceiver;
 
 import java.util.List;
 
-public class AppendEntriesRequest extends RaftServerMessage {
+public class AppendEntriesRequest extends ServerMessage {
 
     private int prevLogIndex;
     private int prevLogTerm;
     private int leaderCommitIndex;
     private List<LogEntry> entries;
 
-    public AppendEntriesRequest(RaftID senderId, RaftID receiverId, int term, int prevLogIndex, int prevLogTerm, int leaderCommitIndex, List<LogEntry> entries) {
-        super(senderId, receiverId, term);
+    public AppendEntriesRequest(RaftID receiverId, int term, int prevLogIndex, int prevLogTerm, int leaderCommitIndex, List<LogEntry> entries) {
+        super(receiverId, term);
         this.prevLogIndex = prevLogIndex;
         this.prevLogTerm = prevLogTerm;
         this.leaderCommitIndex = leaderCommitIndex;

@@ -6,6 +6,7 @@ import de.hhu.bsinfo.dxraft.state.Log;
 import de.hhu.bsinfo.dxraft.message.*;
 import de.hhu.bsinfo.dxraft.state.LogEntry;
 import de.hhu.bsinfo.dxraft.data.RaftData;
+import de.hhu.bsinfo.dxraft.state.ServerState;
 import de.hhu.bsinfo.dxraft.test.DatagramNetworkService;
 import de.hhu.bsinfo.dxraft.timer.RaftTimer;
 import de.hhu.bsinfo.dxraft.timer.TimeoutHandler;
@@ -16,18 +17,6 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class RaftServer implements ServerMessageReceiver, TimeoutHandler {
-
-    // timeout duration and randomization amount when following leader
-    private static final int FOLLOWER_TIMEOUT_DURATION = 500;
-    private static final int FOLLOWER_RANDOMIZATION_AMOUNT = 50;
-
-    // timeout duration and randomization amount when electing
-    private static final int ELECTION_TIMEOUT_DURATION = 500;
-    private static final int ELECTION_RANDOMIZATION_AMOUNT = 50;
-
-    // timeout duration and randomization amount of leader
-    private static final int HEARTBEAT_TIMEOUT_DURATION = 100;
-    private static final int HEARTBEAT_RANDOMIZATION_AMOUNT = 0;
 
     private static final Logger LOGGER = LogManager.getLogger();
 
@@ -40,14 +29,6 @@ public class RaftServer implements ServerMessageReceiver, TimeoutHandler {
     private boolean started = false;
     private ArrayList<LogEntry> pendingRequests = new ArrayList<>();
 
-/*    public RaftServer(RaftServerContext context, ServerNetworkService networkService) {
-        this.networkService = networkService;
-        networkService.setMessageReceiver(this);
-        this.context = context;
-        timer = new RaftTimer(context);
-        state = new ServerState(context, timer, log);
-    }*/
-
     public RaftServer(ServerNetworkService networkService, RaftServerContext context, ServerState state, Log log, RaftTimer timer) {
         this.networkService = networkService;
         this.context = context;
@@ -56,13 +37,6 @@ public class RaftServer implements ServerMessageReceiver, TimeoutHandler {
         this.timer = timer;
     }
 
-/*    public RaftServer(RaftServerContext context) {
-        this.networkService = new DatagramNetworkService(context);
-        networkService.setMessageReceiver(this);
-        this.context = context;
-        RaftTimer timer = new RaftTimer(context,this);
-        state = new ServerState(context, timer, log);
-    }*/
 
     public void start() {
         if (!started) {
@@ -80,13 +54,13 @@ public class RaftServer implements ServerMessageReceiver, TimeoutHandler {
         checkTerm(request.getTerm());
 
         VoteResponse response;
-        if (request.getTerm() >= state.getCurrentTerm() && (state.getVotedFor() == null || state.getVotedFor().equals(request.getSenderId())) &&
+        if (state.isFollower() && request.getTerm() >= state.getCurrentTerm() && (state.getVotedFor() == null || state.getVotedFor().equals(request.getSenderId())) &&
                 log.isAtLeastAsUpToDateAs(request.getLastLogTerm(), request.getLastLogIndex())) {
-            response = new VoteResponse(context.getLocalId(), request.getSenderId(), state.getCurrentTerm(), true);
+            response = new VoteResponse(request.getSenderId(), state.getCurrentTerm(), true);
             state.updateVote(request.getSenderId());
 
         } else {
-            response = new VoteResponse(context.getLocalId(), request.getSenderId(), state.getCurrentTerm(), false);
+            response = new VoteResponse(request.getSenderId(), state.getCurrentTerm(), false);
         }
 
         networkService.sendMessage(response);
@@ -100,17 +74,17 @@ public class RaftServer implements ServerMessageReceiver, TimeoutHandler {
             if (response.isVoteGranted()) {
 
                 LOGGER.debug("Server {} got vote from server {}!", context.getLocalId(), response.getSenderId());
-                state.getVotesMap().put(response.getSenderId(), true);
+                state.updateVote(response.getSenderId(), true);
 
                 //check if server got quorum
-                if (state.getVotesMap().values().stream().filter((value) -> value).count() >= Math.ceil(context.getRaftServers().size()/2.0)) {
+                if (state.getVotesCount() >= Math.ceil(context.getServerCount()/2.0)) {
                     state.convertStateToLeader();
                     sendHeartbeat();
                 }
             } else {
 
                 LOGGER.debug("Server {} got rejection from server {}!", context.getLocalId(), response.getSenderId());
-                state.getVotesMap().put(response.getSenderId(), false);
+                state.updateVote(response.getSenderId(), false);
             }
         }
     }
@@ -139,7 +113,7 @@ public class RaftServer implements ServerMessageReceiver, TimeoutHandler {
         // return false if request term < local term or if logs differ
         if (state.getCurrentTerm() > request.getTerm() || log.isDiffering(request.getPrevLogIndex(), request.getPrevLogTerm())) {
             LOGGER.debug("Server {} is rejecting append entries request because it is an old request or the logs differ!", context.getLocalId());
-            networkService.sendMessage(new AppendEntriesResponse(context.getLocalId(), request.getSenderId(), state.getCurrentTerm(),false));
+            networkService.sendMessage(new AppendEntriesResponse(request.getSenderId(), state.getCurrentTerm(),false));
             return;
         }
 
@@ -177,11 +151,11 @@ public class RaftServer implements ServerMessageReceiver, TimeoutHandler {
         if (state.isLeader()) {
             // if append entries request was not successful and server is still leader, the state of the follower differs from the leader's state
             // -> decrease nextIndex of the follower and try again
-            if (!response.isSuccess() && state.getNextIndexMap().get(response.getSenderId()) > 0) {
+            if (!response.isSuccess()) {
 
                 LOGGER.debug("Server {} got rejected append entries response from server {}, is trying again with decremented index!",
                         context.getLocalId(), response.getSenderId());
-                state.getNextIndexMap().put(response.getSenderId(), state.getNextIndexMap().get(response.getSenderId()) - 1);
+                state.decrementNextIndex(response.getSenderId());
                 sendAppendEntriesRequest(response.getSenderId());
             }
 
@@ -190,10 +164,10 @@ public class RaftServer implements ServerMessageReceiver, TimeoutHandler {
 
                 LOGGER.trace("Server {} got successful append entries response from server {} with matchIndex {}!", context.getLocalId(), response.getSenderId(), response.getMatchIndex());
 
-                state.getMatchIndexMap().put(response.getSenderId(), response.getMatchIndex());
-                state.getNextIndexMap().put(response.getSenderId(), response.getMatchIndex() + 1);
+                state.updateMatchIndex(response.getSenderId(), response.getMatchIndex());
+                state.updateNextIndex(response.getSenderId(), response.getMatchIndex() + 1);
 
-                int newCommitIndex = log.getNewCommitIndex(state.getMatchIndexMap(), context.getServerCount(), state.getCurrentTerm());
+                int newCommitIndex = state.getNewCommitIndex();
                 int currentCommitIndex = log.getCommitIndex();
                 if (newCommitIndex > currentCommitIndex) {
 
@@ -210,7 +184,7 @@ public class RaftServer implements ServerMessageReceiver, TimeoutHandler {
                         if (request != null) {
                             LOGGER.debug("Server {} is sending response to client {} for index {} because it was committed!", context.getLocalId(), request.getSenderId(), i);
 
-                            ClientResponse clientResponse = new ClientResponse(context.getLocalId(), request.getSenderId(), true);
+                            ClientResponse clientResponse = new ClientResponse(request.getSenderAddress(), true);
 
                             logEntry.setClientResponse(clientResponse);
                             networkService.sendMessage(clientResponse);
@@ -233,7 +207,7 @@ public class RaftServer implements ServerMessageReceiver, TimeoutHandler {
             if (request.isReadRequest()) {
                 LOGGER.debug("Server {} got read request!", context.getLocalId());
                 RaftData value = log.getStateMachine().read(request.getPath());
-                ClientResponse response = new ClientResponse(context.getLocalId(), request.getSenderId(), value);
+                ClientResponse response = new ClientResponse(request.getSenderAddress(), value);
                 networkService.sendMessage(response);
             } else if (request.isWriteRequest() || request.isDeleteRequest()) {
                 // update log
@@ -266,7 +240,7 @@ public class RaftServer implements ServerMessageReceiver, TimeoutHandler {
 
                     LOGGER.debug("Server {} got write request and is sending append entries requests to followers!", context.getLocalId());
                     // update logs of all servers
-                    for (RaftID server : context.getRaftServers()) {
+                    for (RaftID server : context.getOtherServerIds()) {
                         sendAppendEntriesRequest(server);
                     }
                 }
@@ -275,9 +249,20 @@ public class RaftServer implements ServerMessageReceiver, TimeoutHandler {
         // else redirect client to current leader
         } else {
             LOGGER.debug("Server {} got client request and is redirecting the client to server {}!", context.getLocalId(), state.getCurrentLeader());
-            networkService.sendMessage(new ClientRedirection(context.getLocalId(), request.getSenderId(), state.getCurrentLeader()));
+            RaftID currentLeader = state.getCurrentLeader();
+            networkService.sendMessage(new ClientRedirection(request.getSenderAddress(), currentLeader == null ? null : context.getAddressById(currentLeader)));
         }
 
+
+    }
+
+    @Override
+    public void processAddServerRequest(AddServerRequest request) {
+
+    }
+
+    @Override
+    public void processRemoveServerRequest(RemoveServerRequest request) {
 
     }
 
@@ -312,7 +297,7 @@ public class RaftServer implements ServerMessageReceiver, TimeoutHandler {
      * Sends heartbeats to all servers.
      */
     private void sendHeartbeat() {
-        AppendEntriesRequest request = new AppendEntriesRequest(context.getLocalId(), null, state.getCurrentTerm(), log.getLastIndex(), log.isEmpty() ? -1 : log.getLastTerm(), log.getCommitIndex(), null);
+        AppendEntriesRequest request = new AppendEntriesRequest(null, state.getCurrentTerm(), log.getLastIndex(), log.isEmpty() ? -1 : log.getLastTerm(), log.getCommitIndex(), null);
         networkService.sendMessageToAllServers(request);
     }
 
@@ -321,10 +306,10 @@ public class RaftServer implements ServerMessageReceiver, TimeoutHandler {
             throw new IllegalStateException("Append entries request could not be sent because state is " + state.getState() + " but should be LEADER!");
         }
 
-        int prevLogTerm = state.getNextIndexMap().get(followerId) == 0 ? -1 : log.get(state.getNextIndexMap().get(followerId)-1).getTerm();
+        int prevLogTerm = state.getNextIndex(followerId) == 0 ? -1 : log.get(state.getNextIndex(followerId)-1).getTerm();
 
-        AppendEntriesRequest request = new AppendEntriesRequest(context.getLocalId(), followerId, state.getCurrentTerm(),
-                state.getNextIndexMap().get(followerId) - 1, prevLogTerm, log.getCommitIndex(), log.getNewestEntries(state.getNextIndexMap().get(followerId)));
+        AppendEntriesRequest request = new AppendEntriesRequest(followerId, state.getCurrentTerm(),
+                state.getNextIndex(followerId) - 1, prevLogTerm, log.getCommitIndex(), log.getNewestEntries(state.getNextIndex(followerId)));
         networkService.sendMessage(request);
     }
 
@@ -332,25 +317,8 @@ public class RaftServer implements ServerMessageReceiver, TimeoutHandler {
      * Sends vote requests to all servers.
      */
     private void sendVoteRequests() {
-        VoteRequest voteRequest = new VoteRequest(context.getLocalId(), null, state.getCurrentTerm(), log.getLastIndex(), log.getLastIndex() >= 0 ? log.getLastEntry().getTerm() : -1);
+        VoteRequest voteRequest = new VoteRequest(null, state.getCurrentTerm(), log.getLastIndex(), log.getLastIndex() >= 0 ? log.getLastEntry().getTerm() : -1);
         networkService.sendMessageToAllServers(voteRequest);
-    }
-
-
-
-    /**
-     * Checks the matchIndexes of the followers to find a higher index where the logs of a majority of the servers match and
-     * the term is the current term of the leader and returns this index. Returns the current commit index if there is no such index.
-     */
-    private int getNewCommitIndex() {
-        int newCommitIndex = log.getCommitIndex();
-        for (int i = log.getCommitIndex() + 1; i <= log.getLastIndex(); i++) {
-            final int index = i;
-            if (state.getMatchIndexMap().values().stream().filter(matchIndex -> matchIndex >= index).count() >= Math.ceil(context.getRaftServers().size()/2.0) && log.get(i).getTerm() == state.getCurrentTerm()) {
-                newCommitIndex = index;
-            }
-        }
-        return newCommitIndex;
     }
 
     private void checkTerm(int term) {
@@ -383,15 +351,11 @@ public class RaftServer implements ServerMessageReceiver, TimeoutHandler {
             servers.add(new RaftAddress(new RaftID(i), "127.0.0.1", 5000 + i));
         }
 
-        List<RaftAddress> clients = new ArrayList<>();
-        clients.add(new RaftAddress(new RaftID(3), "127.0.0.1", 6000));
-
         RaftAddress localAddress = new RaftAddress(new RaftID(id), "127.0.0.1", 5000 + id);
 
         RaftServerContext context = RaftServerContext.RaftServerContextBuilder
                 .aRaftServerContext()
                 .withLocalAddress(localAddress)
-                .withRaftClients(clients)
                 .withRaftServers(servers)
                 .build();
 

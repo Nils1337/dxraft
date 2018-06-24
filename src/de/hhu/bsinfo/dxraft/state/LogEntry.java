@@ -20,13 +20,16 @@ public class LogEntry implements Serializable {
     public LogEntry(int term, ClientRequest clientRequest) {
         this.term = term;
         this.clientRequest = clientRequest;
-        switch (clientRequest.getRequestType()) {
-            case PUT:
-                logEntryType = LogEntryType.PUT;
-                break;
-            case DELETE:
-                logEntryType = LogEntryType.DELETE;
-                break;
+
+        if (clientRequest != null && clientRequest.getRequestType() != null) {
+            switch (clientRequest.getRequestType()) {
+                case PUT:
+                    logEntryType = LogEntryType.PUT;
+                    break;
+                case DELETE:
+                    logEntryType = LogEntryType.DELETE;
+                    break;
+            }
         }
     }
 

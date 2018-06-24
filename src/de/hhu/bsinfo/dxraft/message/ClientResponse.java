@@ -1,21 +1,22 @@
 package de.hhu.bsinfo.dxraft.message;
 
 
+import de.hhu.bsinfo.dxraft.context.RaftAddress;
 import de.hhu.bsinfo.dxraft.context.RaftID;
 import de.hhu.bsinfo.dxraft.data.RaftData;
 
-public class ClientResponse extends RaftClientMessage {
+public class ClientResponse extends RaftMessage {
 
     private boolean success;
     private RaftData value;
 
-    public ClientResponse(RaftID senderId, RaftID receiverId, boolean success) {
-        super(senderId, receiverId);
+    public ClientResponse(RaftAddress receiverAddress, boolean success) {
+        super(receiverAddress);
         this.success = success;
     }
 
-    public ClientResponse(RaftID senderId, RaftID receiverId, RaftData value) {
-        super(senderId, receiverId);
+    public ClientResponse(RaftAddress receiverAddress, RaftData value) {
+        super(receiverAddress);
         this.value = value;
     }
 

@@ -3,11 +3,11 @@ package de.hhu.bsinfo.dxraft.message;
 import de.hhu.bsinfo.dxraft.context.RaftID;
 import de.hhu.bsinfo.dxraft.server.ServerMessageReceiver;
 
-public class VoteRequest extends RaftServerMessage {
+public class VoteRequest extends ServerMessage {
     private int lastLogIndex;
 
-    public VoteRequest(RaftID senderId, RaftID receiverId, int term, int lastLogIndex, int lastLogTerm) {
-        super(senderId, receiverId, term);
+    public VoteRequest(RaftID receiverId, int term, int lastLogIndex, int lastLogTerm) {
+        super(receiverId, term);
         this.lastLogIndex = lastLogIndex;
         this.lastLogTerm = lastLogTerm;
     }

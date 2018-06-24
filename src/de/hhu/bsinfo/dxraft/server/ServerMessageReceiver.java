@@ -8,4 +8,6 @@ public interface ServerMessageReceiver {
     void processAppendEntriesRequest(AppendEntriesRequest request);
     void processAppendEntriesResponse(AppendEntriesResponse response);
     void processClientRequest(ClientRequest request);
+    void processAddServerRequest(AddServerRequest request);
+    void processRemoveServerRequest(RemoveServerRequest request);
 }

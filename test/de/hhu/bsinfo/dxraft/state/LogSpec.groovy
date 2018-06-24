@@ -1,4 +1,4 @@
-package de.hhu.bsinfo.dxraft.server
+package de.hhu.bsinfo.dxraft.state
 
 import de.hhu.bsinfo.dxraft.context.RaftID
 import de.hhu.bsinfo.dxraft.state.Log
@@ -105,20 +105,6 @@ class LogSpec extends Specification {
             1 | 3 || true
             1 | 2 || false
             5 | 1 || true
-    }
-
-    def "test calculation of new commit index"() {
-        setup:
-            def matchIndexMap = [(id1): 3, (id2): 2, (id3): 1]
-            setupLog()
-        expect:
-            log.getNewCommitIndex(matchIndexMap, serverCount, currentTerm) == newCommitIndex
-        where:
-            serverCount | currentTerm || newCommitIndex
-            5 | 2 || 1
-            5 | 3 || -1
-            3 | 3 || 2
-            3 | 2 || 1
     }
 
     def setupUpdateLogTest() {

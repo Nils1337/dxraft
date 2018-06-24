@@ -1,5 +1,6 @@
 package de.hhu.bsinfo.dxraft.message;
 
+import de.hhu.bsinfo.dxraft.context.RaftAddress;
 import de.hhu.bsinfo.dxraft.context.RaftID;
 import de.hhu.bsinfo.dxraft.server.ServerMessageReceiver;
 import de.hhu.bsinfo.dxraft.data.RaftData;
@@ -18,15 +19,24 @@ public class ClientRequest extends RaftMessage implements MessageDeliverer {
     private RaftData value;
     private UUID id;
 
-    public ClientRequest(RaftID senderId, RaftID receiverId, RequestType requestType, String path) {
-        super(senderId, receiverId);
+    public ClientRequest(RaftID receiverId, RequestType requestType, String path) {
+        this(receiverId, requestType, path, null);
+    }
+
+    public ClientRequest(RaftAddress receiverAddress, RequestType requestType, String path) {
+        this(receiverAddress, requestType, path, null);
+    }
+
+    public ClientRequest(RaftID receiverId, RequestType requestType, String path, RaftData value) {
+        super(receiverId);
         this.requestType = requestType;
         this.path = path;
+        this.value = value;
         id = UUID.randomUUID();
     }
 
-    public ClientRequest(RaftID senderId, RaftID receiverId, RequestType requestType, String path, RaftData value) {
-        super(senderId, receiverId);
+    public ClientRequest(RaftAddress receiverAddress, RequestType requestType, String path, RaftData value) {
+        super(receiverAddress);
         this.requestType = requestType;
         this.path = path;
         this.value = value;
@@ -60,14 +70,6 @@ public class ClientRequest extends RaftMessage implements MessageDeliverer {
     @Override
     public void deliverMessage(ServerMessageReceiver messageReceiver) {
         messageReceiver.processClientRequest(this);
-    }
-
-    public void setSenderId(RaftID senderId) {
-        this.senderId = senderId;
-    }
-
-    public void setReceiverId(RaftID receiverId) {
-        this.receiverId = receiverId;
     }
 
     public UUID getId() {

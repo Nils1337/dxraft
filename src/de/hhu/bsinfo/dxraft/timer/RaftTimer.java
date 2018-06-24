@@ -1,12 +1,9 @@
 package de.hhu.bsinfo.dxraft.timer;
 
-import de.hhu.bsinfo.dxraft.context.RaftContext;
 import de.hhu.bsinfo.dxraft.server.RaftServerContext;
-import de.hhu.bsinfo.dxraft.server.ServerState;
+import de.hhu.bsinfo.dxraft.state.ServerState;
 
 import java.util.concurrent.*;
-
-import static de.hhu.bsinfo.dxraft.server.ServerState.State.FOLLOWER;
 
 public class RaftTimer {
 
@@ -28,6 +25,8 @@ public class RaftTimer {
     }
 
     public void reset(ServerState.State newState) {
+        cancel();
+
         switch (newState) {
             case FOLLOWER:
                 schedule(context.getFollowerTimeoutDuration(), context.getFollowerRandomizationAmount());

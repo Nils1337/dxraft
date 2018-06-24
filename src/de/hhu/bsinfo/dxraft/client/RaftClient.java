@@ -4,13 +4,8 @@ import de.hhu.bsinfo.dxraft.context.RaftAddress;
 import de.hhu.bsinfo.dxraft.context.RaftContext;
 import de.hhu.bsinfo.dxraft.context.RaftID;
 import de.hhu.bsinfo.dxraft.data.StringData;
-import de.hhu.bsinfo.dxraft.message.ClientRedirection;
-import de.hhu.bsinfo.dxraft.message.ClientRequest;
-import de.hhu.bsinfo.dxraft.message.ClientResponse;
-import de.hhu.bsinfo.dxraft.message.RaftClientMessage;
+import de.hhu.bsinfo.dxraft.message.*;
 import de.hhu.bsinfo.dxraft.data.RaftData;
-import de.hhu.bsinfo.dxraft.server.RaftServer;
-import de.hhu.bsinfo.dxraft.server.RaftServerContext;
 import de.hhu.bsinfo.dxraft.test.DatagramNetworkService;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -70,16 +65,17 @@ public class RaftClient {
 
     private ClientResponse sendRequest(ClientRequest.RequestType requestType, String path, RaftData value) {
         // select a random server to forward request to
-        int random = ThreadLocalRandom.current().nextInt(context.getRaftServers().size());
-        RaftID serverId = context.getRaftServers().get(random);
+        int random = ThreadLocalRandom.current().nextInt(context.getServersIds().size());
+        RaftAddress serverAddress = context.getRaftServers().
+                get(random);
 
         long startTime = System.currentTimeMillis();
         long currentTime = System.currentTimeMillis();
         while (currentTime - startTime + overallTryDuration > 0) {
 
-            LOGGER.debug("Client {} sending request to server {}", context.getLocalId(), serverId);
+            LOGGER.debug("Client {} sending request to server {}", context.getLocalId(), serverAddress);
 
-            RaftClientMessage response = networkService.sendRequest(new ClientRequest(context.getLocalId(), serverId, requestType, path, value));
+            RaftMessage response = networkService.sendRequest(new ClientRequest(serverAddress, requestType, path, value));
 
             if (response instanceof ClientResponse) {
                 LOGGER.debug("Client {} got response!", context.getLocalId());
@@ -88,10 +84,10 @@ public class RaftClient {
 
             ClientRedirection redirection = (ClientRedirection) response;
 
-            LOGGER.debug("Client {} got redirection to server {}!", context.getLocalId(),redirection.getLeaderId());
+            LOGGER.debug("Client {} got redirection to server {}!", context.getLocalId(), redirection.getLeaderAddress());
 
-            if (redirection.getLeaderId() != null) {
-                serverId = redirection.getLeaderId();
+            if (redirection.getLeaderAddress() != null) {
+                serverAddress = redirection.getLeaderAddress();
             } else {
                 try {
                     Thread.sleep(retryTimeout);
@@ -99,8 +95,8 @@ public class RaftClient {
                     e.printStackTrace();
                 }
                 // select other server randomly
-                random = ThreadLocalRandom.current().nextInt(context.getRaftServers().size());
-                serverId = context.getRaftServers().get(random);
+                random = ThreadLocalRandom.current().nextInt(context.getServersIds().size());
+                serverAddress = context.getRaftServers().get(random);
             }
 
             currentTime = System.currentTimeMillis();
@@ -119,11 +115,8 @@ public class RaftClient {
             servers.add(new RaftAddress(new RaftID((short) i), "127.0.0.1", 5000 + i));
         }
 
-        List<RaftAddress> clients = new ArrayList<>();
-        clients.add(new RaftAddress(new RaftID(id), "127.0.0.1", 6000));
-
         RaftAddress localAddress = new RaftAddress(new RaftID(id), "127.0.0.1", 6000);
-        RaftContext context = new RaftContext(servers, clients, localAddress);
+        RaftContext context = new RaftContext(servers, localAddress);
 
         RaftClient client = new RaftClient(context);
 

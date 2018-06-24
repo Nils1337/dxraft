@@ -1,9 +1,12 @@
-package de.hhu.bsinfo.dxraft.server
+package de.hhu.bsinfo.dxraft.state
 
 import de.hhu.bsinfo.dxraft.context.RaftID
+import de.hhu.bsinfo.dxraft.server.RaftServerContext
 import de.hhu.bsinfo.dxraft.state.Log
+import de.hhu.bsinfo.dxraft.state.ServerState
 import de.hhu.bsinfo.dxraft.timer.RaftTimer
 import spock.lang.Specification
+import spock.lang.Unroll
 
 
 class ServerStateSpec extends Specification {
@@ -15,7 +18,11 @@ class ServerStateSpec extends Specification {
     def id1 = new RaftID(1)
     def id2 = new RaftID(2)
     def id3 = new RaftID(3)
-    def servers = [id1, id2, id3]
+    def servers = [id2, id3]
+
+    def setup() {
+        context.getOtherServerIds() >> servers
+    }
 
     def "test state changes"() {
         expect: "initial state"
@@ -45,13 +52,13 @@ class ServerStateSpec extends Specification {
             state.convertStateToLeader()
         then:
             1 * timer.reset(ServerState.State.LEADER)
-            context.getRaftServers() >> servers
+            context.getServersIds() >> servers
 
             state.isLeader()
             state.getCurrentTerm() == 2
             servers.each { id ->
-                state.getMatchIndexMap()[(id)] == 0
-                state.getNextIndexMap()[(id)] == 4
+                state.getMatchIndex(id) == 0
+                state.getNextIndex(id) == 4
             }
 
         when: "timeout => reset timer"
@@ -85,5 +92,30 @@ class ServerStateSpec extends Specification {
             state.isFollower()
             state.getCurrentTerm() == 3
             state.getVotedFor() == null
+    }
+
+
+    @Unroll
+    def "test calculation of new commit index"() {
+        setup:
+            state.updateTerm(currentTerm)
+            state.setState(ServerState.State.LEADER)
+
+            state.updateMatchIndex(id1, index1)
+            state.updateMatchIndex(id2, index2)
+
+            context.getServerCount() >> 5
+            log.getCommitIndex() >> -1
+            log.getLastIndex() >> 5
+            log.getTermByIndex(_) >> {int index -> index}
+
+        expect:
+            state.getNewCommitIndex() == newCommitIndex
+        where:
+            index1 | index2 | currentTerm || newCommitIndex
+            1 | 2 | 1 || 1
+            3 | 3 | 1 || 1
+            3 | 3 | 3 || 3
+            5 | 3 | 2 || 2
     }
 }

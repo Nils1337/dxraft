@@ -1,9 +1,8 @@
 package de.hhu.bsinfo.dxraft.client;
 
 import de.hhu.bsinfo.dxraft.message.ClientRequest;
-import de.hhu.bsinfo.dxraft.message.ClientResponse;
-import de.hhu.bsinfo.dxraft.message.RaftClientMessage;
+import de.hhu.bsinfo.dxraft.message.RaftMessage;
 
 public interface ClientNetworkService {
-    RaftClientMessage sendRequest(ClientRequest request);
+    RaftMessage sendRequest(ClientRequest request);
 }

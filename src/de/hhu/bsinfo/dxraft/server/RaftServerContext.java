@@ -2,11 +2,10 @@ package de.hhu.bsinfo.dxraft.server;
 
 import de.hhu.bsinfo.dxraft.context.RaftAddress;
 import de.hhu.bsinfo.dxraft.context.RaftContext;
-import de.hhu.bsinfo.dxraft.context.RaftID;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
-import java.util.stream.Collectors;
 
 public class RaftServerContext extends RaftContext {
 
@@ -22,8 +21,8 @@ public class RaftServerContext extends RaftContext {
     private int heartbeatTimeoutDuration;
     private int heartbeatRandomizationAmount;
 
-    public RaftServerContext(List<RaftAddress> raftServers, List<RaftAddress> raftClients, RaftAddress localAddress, int followerTimeoutDuration, int followerRandomizationAmount, int electionTimeoutDuration, int electionRandomizationAmount, int heartbeatTimeoutDuration, int heartbeatRandomizationAmount) {
-        super(raftServers, raftClients, localAddress);
+    public RaftServerContext(List<RaftAddress> raftServers, RaftAddress localAddress, int followerTimeoutDuration, int followerRandomizationAmount, int electionTimeoutDuration, int electionRandomizationAmount, int heartbeatTimeoutDuration, int heartbeatRandomizationAmount) {
+        super(raftServers, localAddress);
         this.followerTimeoutDuration = followerTimeoutDuration;
         this.followerRandomizationAmount = followerRandomizationAmount;
         this.electionTimeoutDuration = electionTimeoutDuration;
@@ -59,7 +58,6 @@ public class RaftServerContext extends RaftContext {
     public static final class RaftServerContextBuilder {
         private RaftAddress localAddress;
         private List<RaftAddress> raftServers = new ArrayList<>();
-        private List<RaftAddress> raftClients = new ArrayList<>();
         private int followerTimeoutDuration = 500;
         private int followerRandomizationAmount = 50;
         private int electionTimeoutDuration = 500;
@@ -86,11 +84,6 @@ public class RaftServerContext extends RaftContext {
 
         public RaftServerContextBuilder withFollowerRandomizationAmount(int followerRandomizationAmount) {
             this.followerRandomizationAmount = followerRandomizationAmount;
-            return this;
-        }
-
-        public RaftServerContextBuilder withRaftClients(List<RaftAddress> raftClients) {
-            this.raftClients = raftClients;
             return this;
         }
 
@@ -124,11 +117,12 @@ public class RaftServerContext extends RaftContext {
                 throw new IllegalArgumentException("Local Address must be provided!");
             }
 
-            // delete local id from server list or client list
-            this.raftServers = raftServers.stream().filter(addr -> !addr.equals(localAddress)).collect(Collectors.toList());
-            this.raftClients = raftClients.stream().filter(addr-> !addr.equals(localAddress)).collect(Collectors.toList());
+            // add local server to list of servers
+            if (!raftServers.contains(localAddress)) {
+                raftServers.add(localAddress);
+            }
 
-            return new RaftServerContext(raftServers, raftClients, localAddress, followerTimeoutDuration, followerRandomizationAmount, electionTimeoutDuration, electionRandomizationAmount, heartbeatTimeoutDuration, heartbeatRandomizationAmount);
+            return new RaftServerContext(raftServers, localAddress, followerTimeoutDuration, followerRandomizationAmount, electionTimeoutDuration, electionRandomizationAmount, heartbeatTimeoutDuration, heartbeatRandomizationAmount);
         }
     }
 }

@@ -36,6 +36,11 @@ public class Log extends ArrayList<LogEntry> {
         return getLastEntry().getTerm();
     }
 
+    public int getTermByIndex(int index) {
+        LogEntry entry = log.get(index);
+        return entry == null ? -1 : entry.getTerm();
+    }
+
     public LogEntry get(int index) {
         return log.get(index);
     }

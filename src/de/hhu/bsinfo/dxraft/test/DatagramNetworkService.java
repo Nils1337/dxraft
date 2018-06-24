@@ -21,7 +21,6 @@ public class DatagramNetworkService extends ServerNetworkService implements Clie
     private RaftContext context;
     private DatagramSocket socket;
     private Thread receiverThread;
-    private Queue<RaftMessage> clientResponses = new LinkedBlockingQueue<>();
 
     public DatagramNetworkService(RaftContext context) {
         this.context = context;
@@ -36,13 +35,15 @@ public class DatagramNetworkService extends ServerNetworkService implements Clie
     }
 
     @Override
-    public RaftClientMessage sendRequest(ClientRequest request) {
+    public RaftMessage sendRequest(ClientRequest request) {
         sendMessage(request);
-        return (RaftClientMessage) receiveMessage();
+        return receiveMessage();
     }
 
     @Override
     public void sendMessage(RaftMessage message) {
+        message.setSenderAddress(context.getLocalAddress());
+
         try (
             ByteArrayOutputStream out = new ByteArrayOutputStream();
             ObjectOutputStream objOut = new ObjectOutputStream(out)
@@ -51,7 +52,12 @@ public class DatagramNetworkService extends ServerNetworkService implements Clie
             objOut.writeObject(message);
             byte[] msg = out.toByteArray();
 
-            RaftAddress receiverAddress = context.getAddressById(message.getReceiverId());
+            RaftAddress receiverAddress = message.getReceiverAddress();
+
+            // if address is not set, try to get it from the context by id
+            if (receiverAddress == null) {
+                receiverAddress = context.getAddressById(message.getReceiverId());
+            }
             SocketAddress socketAddress = new InetSocketAddress(receiverAddress.getIp(), receiverAddress.getPort());
 
             socket.send(new DatagramPacket(msg, msg.length, socketAddress));
@@ -62,7 +68,7 @@ public class DatagramNetworkService extends ServerNetworkService implements Clie
 
     @Override
     public void sendMessageToAllServers(RaftMessage message) {
-        for (RaftID id : context.getRaftServers()) {
+        for (RaftID id : context.getOtherServerIds()) {
             message.setReceiverId(id);
             sendMessage(message);
         }

@@ -1,9 +1,7 @@
 package de.hhu.bsinfo.dxraft.context;
 
-import de.hhu.bsinfo.dxraft.server.RaftServer;
-
-import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 public class RaftContext {
@@ -11,26 +9,30 @@ public class RaftContext {
     // List of all servers in cluster acting as raft servers
     private List<RaftAddress> raftServers;
 
-    // List of all servers in cluster acting as raft clients
-    private List<RaftAddress> raftClients;
-
     private RaftAddress localAddress;
 
-    public RaftContext(List<RaftAddress> raftServers, List<RaftAddress> raftClients, RaftAddress localAddress) {
+    public RaftContext(List<RaftAddress> raftServers, RaftAddress localAddress) {
         if (localAddress == null) {
             throw new IllegalArgumentException("Local Address must not be null!");
         }
         this.localAddress = localAddress;
         this.raftServers = raftServers;
-        this.raftClients = raftClients;
     }
 
-    public List<RaftID> getRaftServers() {
-        return raftServers.stream().map(RaftAddress::getId).collect(Collectors.toList());
+    public Set<RaftID> getServersIds() {
+        return raftServers.stream().map(RaftAddress::getId).collect(Collectors.toSet());
     }
 
-    public List<RaftID> getRaftClients() {
-        return raftClients.stream().map(RaftAddress::getId).collect(Collectors.toList());
+    public List<RaftAddress> getRaftServers() {
+        return raftServers;
+    }
+
+    public Set<RaftID> getOtherServerIds() {
+        return getRaftServers().stream().filter(address -> !address.equals(getLocalAddress())).map(RaftAddress::getId).collect(Collectors.toSet());
+    }
+
+    public Set<RaftAddress> getOtherRaftServers() {
+        return getRaftServers().stream().filter(address -> !address.equals(getLocalAddress())).collect(Collectors.toSet());
     }
 
     public RaftID getLocalId() {
@@ -44,9 +46,6 @@ public class RaftContext {
         }
 
         for (RaftAddress server : raftServers) {
-            if (server.getId().equals(id)) return server;
-        }
-        for (RaftAddress server : raftClients) {
             if (server.getId().equals(id)) return server;
         }
         return null;
