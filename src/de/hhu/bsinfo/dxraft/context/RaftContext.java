@@ -55,6 +55,14 @@ public class RaftContext {
         return localAddress;
     }
 
+    public void addServer(RaftAddress newServer) {
+        raftServers.add(newServer);
+    }
+
+    public void removeServer(RaftAddress server) {
+        raftServers.remove(server);
+    }
+
     public int getServerCount() {
         return raftServers.size();
     }

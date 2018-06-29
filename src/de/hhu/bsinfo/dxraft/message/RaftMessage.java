@@ -11,6 +11,8 @@ public class RaftMessage implements Serializable {
     protected RaftAddress senderAddress;
     protected RaftAddress receiverAddress;
 
+    protected RaftMessage() {}
+
     protected RaftMessage(RaftID receiverId) {
         this.receiverId = receiverId;
     }

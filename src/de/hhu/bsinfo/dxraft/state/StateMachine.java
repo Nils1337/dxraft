@@ -17,15 +17,7 @@ public class StateMachine {
         state.put(path, value);
     }
 
-    public void delete(String path) {
-        state.remove(path);
-    }
-
-    public void applyLogEntry(LogEntry logEntry) {
-        if (logEntry.isWriting()) {
-            state.put(logEntry.getPath(), logEntry.getValue());
-        } else {
-            state.remove(logEntry.getPath());
-        }
+    public RaftData delete(String path) {
+        return state.remove(path);
     }
 }

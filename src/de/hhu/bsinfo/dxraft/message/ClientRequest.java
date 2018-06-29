@@ -1,71 +1,21 @@
 package de.hhu.bsinfo.dxraft.message;
 
-import de.hhu.bsinfo.dxraft.context.RaftAddress;
-import de.hhu.bsinfo.dxraft.context.RaftID;
+
+import de.hhu.bsinfo.dxraft.server.RaftServerContext;
 import de.hhu.bsinfo.dxraft.server.ServerMessageReceiver;
-import de.hhu.bsinfo.dxraft.data.RaftData;
+import de.hhu.bsinfo.dxraft.state.LogEntry;
+import de.hhu.bsinfo.dxraft.state.ServerState;
+import de.hhu.bsinfo.dxraft.state.StateMachine;
 
 import java.util.Objects;
 import java.util.UUID;
 
-public class ClientRequest extends RaftMessage implements MessageDeliverer {
+public abstract class ClientRequest extends RaftMessage implements MessageDeliverer, LogEntry {
 
-    public enum RequestType {
-        GET, PUT, DELETE
-    }
+    private UUID id = UUID.randomUUID();
 
-    private RequestType requestType;
-    private String path;
-    private RaftData value;
-    private UUID id;
-
-    public ClientRequest(RaftID receiverId, RequestType requestType, String path) {
-        this(receiverId, requestType, path, null);
-    }
-
-    public ClientRequest(RaftAddress receiverAddress, RequestType requestType, String path) {
-        this(receiverAddress, requestType, path, null);
-    }
-
-    public ClientRequest(RaftID receiverId, RequestType requestType, String path, RaftData value) {
-        super(receiverId);
-        this.requestType = requestType;
-        this.path = path;
-        this.value = value;
-        id = UUID.randomUUID();
-    }
-
-    public ClientRequest(RaftAddress receiverAddress, RequestType requestType, String path, RaftData value) {
-        super(receiverAddress);
-        this.requestType = requestType;
-        this.path = path;
-        this.value = value;
-        id = UUID.randomUUID();
-    }
-
-    public RequestType getRequestType() {
-        return requestType;
-    }
-
-    public boolean isWriteRequest() {
-        return requestType == RequestType.PUT;
-    }
-
-    public boolean isReadRequest() {
-        return requestType == RequestType.GET;
-    }
-
-    public boolean isDeleteRequest() {
-        return requestType == RequestType.DELETE;
-    }
-
-    public String getPath() {
-        return path;
-    }
-
-    public RaftData getValue() {
-        return value;
-    }
+    private int term = -1;
+    protected boolean committed = false;
 
     @Override
     public void deliverMessage(ServerMessageReceiver messageReceiver) {
@@ -74,6 +24,31 @@ public class ClientRequest extends RaftMessage implements MessageDeliverer {
 
     public UUID getId() {
         return id;
+    }
+
+
+    public boolean isReadRequest() {
+        return this instanceof ReadRequest;
+    }
+
+    @Override
+    public int getTerm() {
+        return term;
+    }
+
+    @Override
+    public boolean isCommitted() {
+        return committed;
+    }
+
+    @Override
+    public void updateClientRequest(ClientRequest request) {
+        setSenderAddress(request.getSenderAddress());
+    }
+
+    @Override
+    public void onAppend(RaftServerContext context, ServerState state) {
+        term = state.getCurrentTerm();
     }
 
     @Override

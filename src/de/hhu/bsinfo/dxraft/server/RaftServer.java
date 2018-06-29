@@ -5,7 +5,6 @@ import de.hhu.bsinfo.dxraft.context.RaftID;
 import de.hhu.bsinfo.dxraft.state.Log;
 import de.hhu.bsinfo.dxraft.message.*;
 import de.hhu.bsinfo.dxraft.state.LogEntry;
-import de.hhu.bsinfo.dxraft.data.RaftData;
 import de.hhu.bsinfo.dxraft.state.ServerState;
 import de.hhu.bsinfo.dxraft.test.DatagramNetworkService;
 import de.hhu.bsinfo.dxraft.timer.RaftTimer;
@@ -27,7 +26,6 @@ public class RaftServer implements ServerMessageReceiver, TimeoutHandler {
     private RaftTimer timer;
 
     private boolean started = false;
-    private ArrayList<LogEntry> pendingRequests = new ArrayList<>();
 
     public RaftServer(ServerNetworkService networkService, RaftServerContext context, ServerState state, Log log, RaftTimer timer) {
         this.networkService = networkService;
@@ -119,29 +117,26 @@ public class RaftServer implements ServerMessageReceiver, TimeoutHandler {
 
         int matchIndex;
         if (request.getEntries() != null && request.getEntries().size() > 0) {
-
             matchIndex = request.getPrevLogIndex() + request.getEntries().size();
-
             // update state
             log.updateLog(request.getPrevLogIndex(), request.getEntries());
-
-            // update commitIndex
-            if (log.getCommitIndex() < request.getLeaderCommitIndex()) {
-                log.updateCommitIndex(Math.min(request.getLeaderCommitIndex(), request.getPrevLogIndex() + request.getEntries().size()));
-            }
-
             LOGGER.debug("Server {} received an append entries request and updated its log. The current matchIndex is {}!", context.getLocalId(), matchIndex);
         } else {
             matchIndex = request.getPrevLogIndex();
+            LOGGER.trace("Server {} received a heartbeat. The current matchIndex is {}!", context.getLocalId(), matchIndex);
 
-            if (log.getCommitIndex() < request.getLeaderCommitIndex()) {
-                log.updateCommitIndex(Math.min(request.getLeaderCommitIndex(), request.getPrevLogIndex()));
-            }
+        }
+
+        // update commit index
+        if (log.getCommitIndex() < request.getLeaderCommitIndex()) {
+            int newCommitIndex = Math.min(request.getLeaderCommitIndex(), matchIndex);
+            LOGGER.debug("Server {} is committing entries from indices {} to {} after getting new commit index from leader", context.getLocalId(), log.getCommitIndex() + 1, newCommitIndex);
+            List<LogEntry> committedEntries = log.updateCommitIndex(newCommitIndex);
+            commitEntries(committedEntries);
         }
 
         //send response
         networkService.sendMessage(new AppendEntriesResponse(context.getLocalId(), request.getSenderId(), state.getCurrentTerm(), true, matchIndex));
-
     }
 
     @Override
@@ -172,22 +167,19 @@ public class RaftServer implements ServerMessageReceiver, TimeoutHandler {
                 if (newCommitIndex > currentCommitIndex) {
 
                     LOGGER.info("Server {} is now committing the log entries up to index {}!", context.getLocalId(), newCommitIndex);
-
-                    log.updateCommitIndex(newCommitIndex);
+                    List<LogEntry> committedEntries = log.updateCommitIndex(newCommitIndex);
+                    commitEntries(committedEntries);
 
                     // send responses for every log entry that was handled by this server and is now committed
-                    for (int i = currentCommitIndex + 1; i <= newCommitIndex; i++) {
-                        LogEntry logEntry = log.get(i);
-                        pendingRequests.remove(logEntry);
-                        ClientRequest request = logEntry.getClientRequest();
+                    for (LogEntry entry: committedEntries) {
+                        ClientResponse clientResponse = entry.buildResponse();
 
-                        if (request != null) {
-                            LOGGER.debug("Server {} is sending response to client {} for index {} because it was committed!", context.getLocalId(), request.getSenderId(), i);
+                        if (clientResponse != null) {
+                            LOGGER.debug("Server {} is sending response to client {} for index {} because it was committed!", context.getLocalId(), clientResponse.getReceiverAddress(), log.indexOf(entry));
 
-                            ClientResponse clientResponse = new ClientResponse(request.getSenderAddress(), true);
-
-                            logEntry.setClientResponse(clientResponse);
                             networkService.sendMessage(clientResponse);
+                        } else {
+                            LOGGER.error("Server {} wanted to send a response to client but the log entry was not applied");
                         }
                     }
                 }
@@ -202,28 +194,25 @@ public class RaftServer implements ServerMessageReceiver, TimeoutHandler {
         // serve request if server is leader
         if (state.isLeader()) {
 
-            // TODO check with majority of servers if still leader?
-
             if (request.isReadRequest()) {
+                // TODO check with majority of servers if still leader
                 LOGGER.debug("Server {} got read request!", context.getLocalId());
-                RaftData value = log.getStateMachine().read(request.getPath());
-                ClientResponse response = new ClientResponse(request.getSenderAddress(), value);
+
+                ReadRequest readRequest = (ReadRequest) request;
+                readRequest.commit(log.getStateMachine(), context);
+                ClientResponse response = readRequest.buildResponse();
                 networkService.sendMessage(response);
-            } else if (request.isWriteRequest() || request.isDeleteRequest()) {
-                // update log
-                LogEntry logEntry = new LogEntry(state.getCurrentTerm(), request);
-
+            } else {
                 // check if request was already handled before
-                if (log.contains(logEntry)) {
+                if (log.contains(request)) {
 
-                    // check if logEntry is a pending request
-                    if (pendingRequests.contains(logEntry)) {
-                        // if request is pending, update the request of the log entry and wait for the request to finish
-                        pendingRequests.get(pendingRequests.indexOf(logEntry)).setClientRequest(request);
-                    } else {
-                        // if request is not pending, get the response that was sent and send it again
-                        LogEntry currentLogEntry = log.get(log.indexOf(logEntry));
-                        ClientResponse clientResponse = currentLogEntry.getClientResponse();
+                    LogEntry currentLogEntry = log.get(log.indexOf(request));
+                    currentLogEntry.updateClientRequest(request);
+
+                    // check if logEntry is already committed
+                    if (currentLogEntry.isCommitted()) {
+                        // if request is committed, get the response and send it
+                        ClientResponse clientResponse = currentLogEntry.buildResponse();
 
                         if (clientResponse == null) {
                             // this should not happen
@@ -233,10 +222,8 @@ public class RaftServer implements ServerMessageReceiver, TimeoutHandler {
                         }
                     }
                 } else {
-                    log.append(logEntry);
-
-                    // save request to later send response
-                    pendingRequests.add(logEntry);
+                    request.onAppend(context, state);
+                    log.append(request);
 
                     LOGGER.debug("Server {} got write request and is sending append entries requests to followers!", context.getLocalId());
                     // update logs of all servers
@@ -311,6 +298,12 @@ public class RaftServer implements ServerMessageReceiver, TimeoutHandler {
         AppendEntriesRequest request = new AppendEntriesRequest(followerId, state.getCurrentTerm(),
                 state.getNextIndex(followerId) - 1, prevLogTerm, log.getCommitIndex(), log.getNewestEntries(state.getNextIndex(followerId)));
         networkService.sendMessage(request);
+    }
+
+    private void commitEntries(List<LogEntry> entries) {
+        for (LogEntry entry: entries) {
+            entry.commit(log.getStateMachine(), context);
+        }
     }
 
     /**

@@ -18,7 +18,8 @@ class LogSpec extends Specification {
 
     def setupLog() {
         3.times {
-            def entry = new LogEntry(it+1)
+            def entry = Mock(LogEntry)
+            entry.getTerm() >> it + 1
             logEntries.push(entry)
             log.append(entry)
         }
@@ -110,7 +111,11 @@ class LogSpec extends Specification {
     def setupUpdateLogTest() {
         setupLog()
         log.updateCommitIndex(0)
-        def newEntries = (1..3).collect({new LogEntry(it+2)})
+        def newEntries = (1..3).collect({
+            def entry = Mock(LogEntry)
+            entry.getTerm() >> it + 2
+            entry
+        })
         return newEntries
     }
 

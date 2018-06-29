@@ -37,7 +37,7 @@ public class RaftClient {
     }
 
     public RaftData read(String path) {
-        ClientResponse response = sendRequest(ClientRequest.RequestType.GET, path, null);
+        ClientResponse response = sendRequest(new ReadRequest(path));
         if (response != null) {
             return response.getValue();
         }
@@ -46,7 +46,7 @@ public class RaftClient {
     }
 
     public boolean write(String path, RaftData value) {
-        ClientResponse response = sendRequest(ClientRequest.RequestType.PUT, path, value);
+        ClientResponse response = sendRequest(new WriteRequest(path, value));
         if (response != null) {
             return response.isSuccess();
         }
@@ -54,16 +54,16 @@ public class RaftClient {
         return false;
     }
 
-    public boolean delete(String path) {
-        ClientResponse response = sendRequest(ClientRequest.RequestType.DELETE, path, null);
+    public RaftData delete(String path) {
+        ClientResponse response = sendRequest(new DeleteRequest(path));
         if (response != null) {
-            return response.isSuccess();
+            return response.getValue();
         }
 
-        return false;
+        return null;
     }
 
-    private ClientResponse sendRequest(ClientRequest.RequestType requestType, String path, RaftData value) {
+    private ClientResponse sendRequest(ClientRequest request) {
         // select a random server to forward request to
         int random = ThreadLocalRandom.current().nextInt(context.getServersIds().size());
         RaftAddress serverAddress = context.getRaftServers().
@@ -75,7 +75,8 @@ public class RaftClient {
 
             LOGGER.debug("Client {} sending request to server {}", context.getLocalId(), serverAddress);
 
-            RaftMessage response = networkService.sendRequest(new ClientRequest(serverAddress, requestType, path, value));
+            request.setReceiverAddress(serverAddress);
+            RaftMessage response = networkService.sendRequest(request);
 
             if (response instanceof ClientResponse) {
                 LOGGER.debug("Client {} got response!", context.getLocalId());
@@ -152,8 +153,8 @@ public class RaftClient {
             } else if (in.startsWith("delete")) {
                 String[] strings = in.split(" ");
                 if (strings.length > 1) {
-                    boolean result = client.delete(strings[1]);
-                    if (result) {
+                    RaftData result = client.delete(strings[1]);
+                    if (result != null) {
                         System.out.println("Deletion of \"" + strings[1] + "\" was successful!");
                     } else {
                         System.out.println("Deletion failed!");

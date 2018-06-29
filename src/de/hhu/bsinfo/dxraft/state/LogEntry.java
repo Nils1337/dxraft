@@ -1,96 +1,21 @@
 package de.hhu.bsinfo.dxraft.state;
 
-import de.hhu.bsinfo.dxraft.data.RaftData;
 import de.hhu.bsinfo.dxraft.message.ClientRequest;
 import de.hhu.bsinfo.dxraft.message.ClientResponse;
+import de.hhu.bsinfo.dxraft.server.RaftServerContext;
 
 import java.io.Serializable;
-import java.util.Objects;
 
-public class LogEntry implements Serializable {
-    public enum LogEntryType {
-        PUT, DELETE
-    }
+public interface LogEntry extends Serializable {
 
-    private int term;
-    private ClientRequest clientRequest;
-    private ClientResponse clientResponse;
-    private LogEntryType logEntryType;
 
-    public LogEntry(int term, ClientRequest clientRequest) {
-        this.term = term;
-        this.clientRequest = clientRequest;
+    int getTerm();
+    ClientResponse buildResponse();
 
-        if (clientRequest != null && clientRequest.getRequestType() != null) {
-            switch (clientRequest.getRequestType()) {
-                case PUT:
-                    logEntryType = LogEntryType.PUT;
-                    break;
-                case DELETE:
-                    logEntryType = LogEntryType.DELETE;
-                    break;
-            }
-        }
-    }
+    void updateClientRequest(ClientRequest request);
 
-    public LogEntry(int term) {
-        this.term = term;
-    }
+    void onAppend(RaftServerContext context, ServerState state);
+    void commit(StateMachine stateMachine, RaftServerContext context);
 
-//    public void setValue(RaftData value) {
-//        this.value = value;
-//    }
-
-    public int getTerm() {
-        return term;
-    }
-
-    public String getPath() {
-        return clientRequest.getPath();
-    }
-
-    public LogEntryType getLogEntryType() {
-        return logEntryType;
-    }
-
-    public boolean isWriting() {
-        return logEntryType == LogEntryType.PUT;
-    }
-
-    public boolean isDeletion() {
-        return logEntryType == LogEntryType.DELETE;
-    }
-
-    public RaftData getValue() {
-        return clientRequest.getValue();
-    }
-
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
-        LogEntry logEntry = (LogEntry) o;
-        return Objects.equals(clientRequest, logEntry.clientRequest);
-    }
-
-    @Override
-    public int hashCode() {
-        return Objects.hash(clientRequest);
-    }
-
-    public ClientResponse getClientResponse() {
-        return clientResponse;
-    }
-
-    public void setClientResponse(ClientResponse clientResponse) {
-        this.clientResponse = clientResponse;
-    }
-
-    public void setClientRequest(ClientRequest clientRequest) {
-        this.clientRequest = clientRequest;
-    }
-
-    public ClientRequest getClientRequest() {
-        return clientRequest;
-    }
+    boolean isCommitted();
 }

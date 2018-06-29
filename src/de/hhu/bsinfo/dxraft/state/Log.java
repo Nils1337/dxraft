@@ -1,6 +1,7 @@
 package de.hhu.bsinfo.dxraft.state;
 
 import de.hhu.bsinfo.dxraft.context.RaftID;
+import de.hhu.bsinfo.dxraft.server.RaftServerContext;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -61,7 +62,7 @@ public class Log extends ArrayList<LogEntry> {
         return log.contains(logEntry);
     }
 
-    public void updateCommitIndex(int newCommitIndex) {
+    public List<LogEntry> updateCommitIndex(int newCommitIndex) {
         if (newCommitIndex < this.commitIndex) {
             throw new IllegalArgumentException("The commit index must never be decreased!");
         }
@@ -70,12 +71,11 @@ public class Log extends ArrayList<LogEntry> {
             throw new IllegalArgumentException("Cannot commit index that is not logged");
         }
 
-        // update state machine
-        for (int i = this.commitIndex + 1; i <= newCommitIndex; i++) {
-            stateMachine.applyLogEntry(log.get(i));
-        }
+        // return committed entries
+        List<LogEntry> committedEntries = log.subList(commitIndex + 1, newCommitIndex + 1);
         this.commitIndex = newCommitIndex;
 
+        return committedEntries;
     }
 
     public List<LogEntry> getNewestEntries(int fromIndex) {

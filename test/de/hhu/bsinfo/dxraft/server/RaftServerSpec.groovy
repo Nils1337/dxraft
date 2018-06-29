@@ -1,18 +1,19 @@
 package de.hhu.bsinfo.dxraft.server
 
 import de.hhu.bsinfo.dxraft.context.RaftID
-import de.hhu.bsinfo.dxraft.data.RaftData
 import de.hhu.bsinfo.dxraft.message.AppendEntriesRequest
 import de.hhu.bsinfo.dxraft.message.AppendEntriesResponse
 import de.hhu.bsinfo.dxraft.message.ClientRedirection
 import de.hhu.bsinfo.dxraft.message.ClientRequest
 import de.hhu.bsinfo.dxraft.message.ClientResponse
+import de.hhu.bsinfo.dxraft.message.DeleteRequest
+import de.hhu.bsinfo.dxraft.message.ReadRequest
 import de.hhu.bsinfo.dxraft.message.VoteRequest
 import de.hhu.bsinfo.dxraft.message.VoteResponse
+import de.hhu.bsinfo.dxraft.message.WriteRequest
 import de.hhu.bsinfo.dxraft.state.Log
 import de.hhu.bsinfo.dxraft.state.LogEntry
 import de.hhu.bsinfo.dxraft.state.ServerState
-import de.hhu.bsinfo.dxraft.state.StateMachine
 import de.hhu.bsinfo.dxraft.timer.RaftTimer
 import spock.lang.Shared
 import spock.lang.Specification
@@ -171,54 +172,78 @@ class RaftServerSpec extends Specification {
             termUpdate = msgTerm > localTerm ? 1 : 0
     }
 
-//    def "test log interaction of append entries request handler"() {
-//        given:
-//            def request = Mock(AppendEntriesRequest)
-//
-//        when:
-//            server.processAppendEntriesRequest(request)
-//
-//        then:
-//            request.getTerm() >> msgTerm
-//            state.getCurrentTerm() >> localTerm
-//
-//            1 * log.updateLog(prevIndex, entries)
-//            logUpdate * log.updateCommitIndex(newCommitIndex)
-//
-//        where:
-//            localIndex | leaderIndex | prevIndex | entries || newCommitIndex
-//            0 | 0 | 0 | [new LogEntry(1)] || 0
-//            0 | 1 | 0 | [new LogEntry(1)] || 1
-//            1 | 5 | 2 | (1..2).collect {new LogEntry(it)} || 4
-//            1 | 2 | 2 | (1..2).collect {new LogEntry(it)} || 2
-//
-//            logUpdate = leaderIndex > localIndex ? 1 : 0
-//    }
-
-    def "test state change of append entries request handler"() {
+    def "test log update of append entries request handler"() {
         given:
             def request = Mock(AppendEntriesRequest)
+
+            def requestEntries = (1..3).collect({
+                Mock(LogEntry)
+            })
+
+            def committedEntries = (1..2).collect({
+                Mock(LogEntry)
+            })
+
+            with (request) {
+                getTerm() >> 2
+                getPrevLogIndex() >> 2
+                getEntries() >> requestEntries
+                getLeaderCommitIndex() >> leaderIndex
+            }
+
+            state.getCurrentTerm() >> 1
+            log.getCommitIndex() >> 2
 
         when:
             server.processAppendEntriesRequest(request)
 
         then:
-            request.getEntries() >> entries
-            request.getPrevLogIndex() >> prevIndex
-            request.getLeaderCommitIndex() >> leaderIndex
-            log.getCommitIndex() >> localIndex
 
-            1 * log.updateLog(prevIndex, entries)
-            logUpdate * log.updateCommitIndex(newCommitIndex)
+            // log should be updated correctly
+            1 * log.updateLog(2, requestEntries)
+
+            // commit index should be updated correctly
+            1 * log.updateCommitIndex(newCommitIndex) >> committedEntries
+
+            // entries should be committed
+            committedEntries.each { entry ->
+                1 * entry.commit(*_)
+            }
 
         where:
-            localIndex | leaderIndex | prevIndex | entries || newCommitIndex
-            0 | 0 | 0 | [new LogEntry(1)] || 0
-            0 | 1 | 0 | [new LogEntry(1)] || 1
-            1 | 5 | 2 | (1..2).collect {new LogEntry(it)} || 4
-            1 | 2 | 2 | (1..2).collect {new LogEntry(it)} || 2
+            leaderIndex || newCommitIndex
+            4 || 4
+            5 || 5
+            6 || 5
+    }
 
-            logUpdate = leaderIndex > localIndex ? 1 : 0
+    def "test log update of append entries request handler when not committing any entries"() {
+        given:
+            def request = Mock(AppendEntriesRequest)
+
+            def requestEntries = (1..3).collect({
+                Mock(LogEntry)
+            })
+
+            with (request) {
+                getTerm() >> 3
+                getPrevLogIndex() >> 2
+                getEntries() >> requestEntries
+                getLeaderCommitIndex() >> 1
+            }
+
+            state.getCurrentTerm() >> 3
+            log.getCommitIndex() >> 2
+
+        when:
+            server.processAppendEntriesRequest(request)
+
+        then:
+            // log should be updated correctly
+            1 * log.updateLog(2, requestEntries)
+
+            // commit index should not be updated
+            0 * log.updateCommitIndex(_)
     }
 
     def "test unsuccessful append entries request"() {
@@ -251,7 +276,11 @@ class RaftServerSpec extends Specification {
         given:
             def response = Mock(AppendEntriesResponse)
 
-            def logEntries = (1..2).collect {new LogEntry(it, Mock(ClientRequest))}
+            def logEntries = (1..2).collect {
+                def entry = Mock(LogEntry)
+                entry.buildResponse() >> Mock(ClientResponse)
+                entry
+            }
 
             with (response) {
                 isSuccess() >> true
@@ -265,7 +294,6 @@ class RaftServerSpec extends Specification {
             }
 
             with (log) {
-                get(_) >> {int index -> logEntries[index-2]}
                 getCommitIndex() >> 1
                 getLastIndex() >> 4
             }
@@ -273,11 +301,11 @@ class RaftServerSpec extends Specification {
             server.processAppendEntriesResponse(response)
 
         then:
+            //commit index should be updated correctly
+            1 * log.updateCommitIndex(3) >> logEntries
+
             //response should be sent for every committed entry
             2 * netService.sendMessage(_)
-
-            //commit index should be updated correctly
-            1 * log.updateCommitIndex(3)
 
             //index maps should be updated correctly
             1 * state.updateMatchIndex(id1, 3)
@@ -300,68 +328,105 @@ class RaftServerSpec extends Specification {
 
     def "test read request"() {
         given:
-            def request = Mock(ClientRequest)
-            def stateMachine = Mock(StateMachine)
-            def value = Mock(RaftData)
+            def request = Mock(ReadRequest)
+            request.isReadRequest() >> true
+
+            def response = Mock(ClientResponse)
+            state.isLeader() >> true
 
         when:
             server.processClientRequest(request)
 
         then:
-            state.isLeader() >> true
-            request.isReadRequest() >> true
-            request.getSenderId() >> id1
-            log.getStateMachine() >> stateMachine
-            stateMachine.read(_) >> value
-
-            1 * netService.sendMessage({response ->
-                response instanceof ClientResponse &&
-                response.value.is(value) &&
-                response.receiverId == id1})
+            1 * request.commit(*_)
+            1 * request.buildResponse() >> response
+            1 * netService.sendMessage(response)
     }
 
     def "test write request"() {
         given:
-            def request = Mock(ClientRequest)
+            def request = Mock(WriteRequest)
             def servers = [id1, id2]
+            context.getOtherServerIds() >> servers
 
             state.isLeader() >> true
-            request.isWriteRequest() >> true
-            request.getSenderId() >> id1
             log.contains(_) >> false
-            context.getOtherServerIds() >> servers
 
         when:
             server.processClientRequest(request)
 
         then:
-            // should update log
-            1 * log.append({logEntry -> logEntry.clientRequest.is(request)})
+            // should append to log
+            1 * request.onAppend(*_)
+            1 * log.append(request)
 
             // should send append entries request to each follower
             2 * netService.sendMessage({appRequest ->
                 appRequest instanceof AppendEntriesRequest})
     }
 
-    def "test duplicate write request"() {
+    def "test delete request"() {
         given:
-            def request = Mock(ClientRequest)
-            def prevResponse = Mock(ClientResponse)
-            def logEntry = Mock(LogEntry)
+            def request = Mock(DeleteRequest)
+            def servers = [id1, id2, id3]
+            context.getOtherServerIds() >> servers
+
+            state.isLeader() >> true
+            log.contains(_) >> false
 
         when:
             server.processClientRequest(request)
 
         then:
+            // should append to log
+            1 * request.onAppend(*_)
+            1 * log.append(request)
+
+            // should send append entries request to each follower
+            3 * netService.sendMessage({appRequest ->
+                appRequest instanceof AppendEntriesRequest})
+    }
+
+    def "test duplicate, committed write request"() {
+        given:
+            def request = Mock(WriteRequest)
+            def logEntry = Mock(LogEntry)
+            def response = Mock(ClientResponse)
+            logEntry.isCommitted() >> true
+
             state.isLeader() >> true
-            request.isWriteRequest() >> true
-            request.getRequestType() >> ClientRequest.RequestType.PUT
             log.contains(_) >> true
             log.get(_) >> logEntry
-            logEntry.getClientResponse() >> prevResponse
-            request.getSenderId() >> id1
 
-            1 * netService.sendMessage({response ->
-                response.is(prevResponse)})
+        when:
+            server.processClientRequest(request)
+
+        then: "should send response because entry is already committed"
+            1 * logEntry.updateClientRequest(request)
+            1 * logEntry.buildResponse() >> response
+            1 * netService.sendMessage(response)
+    }
+
+    def "test duplicate, uncommitted write request"() {
+        given:
+            def request = Mock(WriteRequest)
+            def logEntry = Mock(LogEntry)
+            def response = Mock(ClientResponse)
+            logEntry.isCommitted() >> false
+
+            state.isLeader() >> true
+            log.contains(_) >> true
+            log.get(_) >> logEntry
+
+        when:
+            server.processClientRequest(request)
+
+        then: "should do nothing because entry is not committed"
+            1 * logEntry.updateClientRequest(request)
+            0 * netService.sendMessage(response)
+    }
+
+    def "test add server request"() {
+
     }
 }
