@@ -48,7 +48,11 @@ public abstract class ClientRequest extends RaftMessage implements MessageDelive
 
     @Override
     public void onAppend(RaftServerContext context, ServerState state) {
-        term = state.getCurrentTerm();
+        // Set term when this request is initially appended to log after request got to leader.
+        // Later this request will be appended to the followers logs, then the term should not be updated.
+        if (term == -1) {
+            term = state.getCurrentTerm();
+        }
     }
 
     @Override

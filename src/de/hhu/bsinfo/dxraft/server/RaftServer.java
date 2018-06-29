@@ -120,6 +120,7 @@ public class RaftServer implements ServerMessageReceiver, TimeoutHandler {
             matchIndex = request.getPrevLogIndex() + request.getEntries().size();
             // update state
             log.updateLog(request.getPrevLogIndex(), request.getEntries());
+            request.getEntries().forEach((entry) -> entry.onAppend(context, state));
             LOGGER.debug("Server {} received an append entries request and updated its log. The current matchIndex is {}!", context.getLocalId(), matchIndex);
         } else {
             matchIndex = request.getPrevLogIndex();
