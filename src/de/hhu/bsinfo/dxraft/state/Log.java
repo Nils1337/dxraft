@@ -82,11 +82,18 @@ public class Log extends ArrayList<LogEntry> {
         return new ArrayList<>(log.subList(fromIndex, log.size()));
     }
 
-    public void updateLog(int prevLogIndex, List<LogEntry> newEntries) {
+    /**
+     * Updates the log from prevLogIndex with the log entries in newEntries
+     * @param prevLogIndex
+     * @param newEntries
+     * @return Removed log entries
+     */
+    public List<LogEntry> updateLog(int prevLogIndex, List<LogEntry> newEntries) {
         if (prevLogIndex < commitIndex) {
             throw new IllegalArgumentException("Cannot update already committed entries!");
         }
 
+        List<LogEntry> removedEntries = new ArrayList<>();
         for (int i = 0; i < newEntries.size(); i++) {
 
             int currentIndex = prevLogIndex + 1 + i;
@@ -98,7 +105,9 @@ public class Log extends ArrayList<LogEntry> {
             LogEntry prevEntry = log.get(prevLogIndex + 1 + i);
 
             if (prevEntry != null && prevEntry.getTerm() != newEntries.get(i).getTerm()) {
-                log.subList(currentIndex, log.size()).clear();
+                List<LogEntry> logSublist = log.subList(currentIndex, log.size());
+                removedEntries.addAll(logSublist);
+                logSublist.clear();
                 log.add(newEntries.get(i));
                 continue;
             }
@@ -106,6 +115,7 @@ public class Log extends ArrayList<LogEntry> {
             log.set(currentIndex, newEntries.get(i));
 
         }
+        return removedEntries;
     }
 
     /**

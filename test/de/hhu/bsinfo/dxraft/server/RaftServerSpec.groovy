@@ -184,6 +184,10 @@ class RaftServerSpec extends Specification {
                 Mock(LogEntry)
             })
 
+            def removedEntries = (1..2).collect(){
+                Mock(LogEntry)
+            }
+
             with (request) {
                 getTerm() >> 2
                 getPrevLogIndex() >> 2
@@ -200,9 +204,14 @@ class RaftServerSpec extends Specification {
         then:
 
             // log should be updated correctly
-            1 * log.updateLog(2, requestEntries)
+            1 * log.updateLog(2, requestEntries) >> removedEntries
             requestEntries.each {entry ->
                 1 * entry.onAppend(*_)
+            }
+
+            // onRemove() should be called on removed entries
+            removedEntries.each {entry ->
+                1 * entry.onRemove(_)
             }
 
             // commit index should be updated correctly
@@ -228,6 +237,10 @@ class RaftServerSpec extends Specification {
                 Mock(LogEntry)
             })
 
+            def removedEntries = (1..2).collect(){
+                Mock(LogEntry)
+            }
+
             with (request) {
                 getTerm() >> 3
                 getPrevLogIndex() >> 2
@@ -243,9 +256,14 @@ class RaftServerSpec extends Specification {
 
         then:
             // log should be updated correctly
-            1 * log.updateLog(2, requestEntries)
+            1 * log.updateLog(2, requestEntries) >> removedEntries
             requestEntries.each {entry ->
                 1 * entry.onAppend(*_)
+            }
+
+            // onRemove() should be called on removed entries
+            removedEntries.each {entry ->
+                1 * entry.onRemove(_)
             }
 
             // commit index should not be updated

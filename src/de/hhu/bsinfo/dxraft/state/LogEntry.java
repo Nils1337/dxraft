@@ -7,8 +7,6 @@ import de.hhu.bsinfo.dxraft.server.RaftServerContext;
 import java.io.Serializable;
 
 public interface LogEntry extends Serializable {
-
-
     int getTerm();
     ClientResponse buildResponse();
 
@@ -16,6 +14,7 @@ public interface LogEntry extends Serializable {
 
     void onAppend(RaftServerContext context, ServerState state);
     void commit(StateMachine stateMachine, RaftServerContext context);
+    default void onRemove(RaftServerContext context) {}
 
     boolean isCommitted();
 }

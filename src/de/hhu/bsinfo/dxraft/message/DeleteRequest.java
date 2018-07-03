@@ -18,15 +18,15 @@ public class DeleteRequest extends ClientRequest {
 
     @Override
     public void commit(StateMachine stateMachine, RaftServerContext context) {
-        if (!committed) {
+        if (!isCommitted()) {
             deletedData = stateMachine.delete(path);
-            committed = true;
         }
+        super.commit(stateMachine, context);
     }
 
     @Override
     public ClientResponse buildResponse() {
-        if (committed) {
+        if (isCommitted()) {
             return new ClientResponse(getSenderAddress(), deletedData);
         }
         return null;

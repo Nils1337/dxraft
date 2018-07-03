@@ -56,6 +56,7 @@ public class RaftContext {
     }
 
     public void addServer(RaftAddress newServer) {
+        // TODO what if server gets added that is already in the list?
         raftServers.add(newServer);
     }
 

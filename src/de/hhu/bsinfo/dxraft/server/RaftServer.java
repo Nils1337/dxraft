@@ -119,8 +119,10 @@ public class RaftServer implements ServerMessageReceiver, TimeoutHandler {
         if (request.getEntries() != null && request.getEntries().size() > 0) {
             matchIndex = request.getPrevLogIndex() + request.getEntries().size();
             // update state
-            log.updateLog(request.getPrevLogIndex(), request.getEntries());
+            List<LogEntry> removedEntries = log.updateLog(request.getPrevLogIndex(), request.getEntries());
+
             request.getEntries().forEach((entry) -> entry.onAppend(context, state));
+            removedEntries.forEach((entry) -> entry.onRemove(context));
             LOGGER.debug("Server {} received an append entries request and updated its log. The current matchIndex is {}!", context.getLocalId(), matchIndex);
         } else {
             matchIndex = request.getPrevLogIndex();
@@ -189,6 +191,9 @@ public class RaftServer implements ServerMessageReceiver, TimeoutHandler {
 
     }
 
+
+    // TODO improve performance of configuration changes by catching up new servers before propagating the change to followers
+    // TODO what happens if removed server is the leader?
     @Override
     public synchronized void processClientRequest(ClientRequest request) {
 

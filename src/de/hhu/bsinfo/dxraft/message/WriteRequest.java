@@ -24,15 +24,15 @@ public class WriteRequest extends ClientRequest {
 
     @Override
     public void commit(StateMachine stateMachine, RaftServerContext context) {
-        if (!committed) {
+        if (!isCommitted()) {
             stateMachine.write(path, value);
-            committed = true;
         }
+        super.commit(stateMachine, context);
     }
 
     @Override
     public ClientResponse buildResponse() {
-        if (committed) {
+        if (isCommitted()) {
             return new ClientResponse(getSenderAddress(), true);
         }
         return null;

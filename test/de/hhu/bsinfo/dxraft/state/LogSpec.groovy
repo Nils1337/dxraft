@@ -132,20 +132,22 @@ class LogSpec extends Specification {
         setup:
             def newEntries = setupUpdateLogTest()
         when:
-            log.updateLog(0, newEntries)
+            def removedEntries = log.updateLog(0, newEntries)
         then:
             log.getSize() == 4
             log.get(0).is(logEntries[0])
             3.times {
                 log.get(it+1).is(newEntries[it])
             }
+
+            removedEntries == logEntries[1..-1]
     }
 
     def "test update log 3"() {
         setup:
             def newEntries = setupUpdateLogTest()
         when:
-            log.updateLog(2, newEntries)
+            def removedEntries = log.updateLog(2, newEntries)
         then:
             log.getSize() == 6
             3.times {
@@ -154,6 +156,8 @@ class LogSpec extends Specification {
             3.times {
                 log.get(it+3).is(newEntries[it])
             }
+
+            removedEntries == []
     }
 
 }

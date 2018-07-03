@@ -19,15 +19,15 @@ public class ReadRequest extends ClientRequest {
 
     @Override
     public void commit(StateMachine stateMachine, RaftServerContext context) {
-        if (!committed) {
+        if (!isCommitted()) {
             value = stateMachine.read(path);
-            committed = true;
         }
+        super.commit(stateMachine, context);
     }
 
     @Override
     public ClientResponse buildResponse() {
-        if (committed) {
+        if (isCommitted()) {
             return new ClientResponse(getSenderAddress(), value);
         }
         return null;

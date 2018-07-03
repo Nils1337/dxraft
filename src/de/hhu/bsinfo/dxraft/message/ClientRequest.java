@@ -15,7 +15,7 @@ public abstract class ClientRequest extends RaftMessage implements MessageDelive
     private UUID id = UUID.randomUUID();
 
     private int term = -1;
-    protected boolean committed = false;
+    private boolean committed = false;
 
     @Override
     public void deliverMessage(ServerMessageReceiver messageReceiver) {
@@ -29,6 +29,18 @@ public abstract class ClientRequest extends RaftMessage implements MessageDelive
 
     public boolean isReadRequest() {
         return this instanceof ReadRequest;
+    }
+
+    public boolean isConfigChangeRequest() {
+        return isAddServerRequest() || isRemoveServerRequest();
+    }
+
+    public boolean isAddServerRequest() {
+        return this instanceof AddServerRequest;
+    }
+
+    public boolean isRemoveServerRequest() {
+        return this instanceof RemoveServerRequest;
     }
 
     @Override
@@ -53,6 +65,11 @@ public abstract class ClientRequest extends RaftMessage implements MessageDelive
         if (term == -1) {
             term = state.getCurrentTerm();
         }
+    }
+
+    @Override
+    public void commit(StateMachine stateMachine, RaftServerContext context) {
+        committed = true;
     }
 
     @Override
