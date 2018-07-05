@@ -118,9 +118,9 @@ public class RaftServerContext extends RaftContext {
             }
 
             // add local server to list of servers
-            if (!raftServers.contains(localAddress)) {
-                raftServers.add(localAddress);
-            }
+//            if (!raftServers.contains(localAddress)) {
+//                raftServers.add(localAddress);
+//            }
 
             return new RaftServerContext(raftServers, localAddress, followerTimeoutDuration, followerRandomizationAmount, electionTimeoutDuration, electionRandomizationAmount, heartbeatTimeoutDuration, heartbeatRandomizationAmount);
         }

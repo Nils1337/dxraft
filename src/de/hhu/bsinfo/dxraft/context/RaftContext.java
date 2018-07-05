@@ -61,12 +61,12 @@ public class RaftContext {
 
     public void addServer(RaftAddress newServer) {
         // TODO what if server gets added that is already in the list?
-        LOGGER.debug("Adding server {} to configuration", newServer.toString());
+        LOGGER.info("Adding server {} to configuration", newServer.toString());
         raftServers.add(newServer);
     }
 
     public void removeServer(RaftAddress server) {
-        LOGGER.debug("Removing server {} from configuration", server.toString());
+        LOGGER.info("Removing server {} from configuration", server.toString());
         raftServers.remove(server);
     }
 

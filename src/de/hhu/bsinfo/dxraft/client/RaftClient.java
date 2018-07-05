@@ -89,7 +89,7 @@ public class RaftClient {
         long currentTime = System.currentTimeMillis();
         while (startTime - currentTime + overallTryDuration > 0) {
 
-            LOGGER.debug("Client {} sending request to server {}", context.getLocalId(), serverAddress);
+            LOGGER.debug("Sending request to server {}", serverAddress);
 
             request.setReceiverAddress(serverAddress);
             RaftMessage response = networkService.sendRequest(request);
@@ -103,14 +103,14 @@ public class RaftClient {
             }
 
             if (response instanceof ClientResponse) {
-                LOGGER.debug("Client {} got response!", context.getLocalId());
+                LOGGER.debug("Received response");
                 return (ClientResponse) response;
             }
 
             if (response instanceof ClientRedirection) {
                 ClientRedirection redirection = (ClientRedirection) response;
 
-                LOGGER.debug("Client {} got redirection to server {}!", context.getLocalId(), redirection.getLeaderAddress());
+                LOGGER.debug("Received redirection to server {}", redirection.getLeaderAddress());
 
                 if (redirection.getLeaderAddress() != null) {
                     serverAddress = redirection.getLeaderAddress();
@@ -121,7 +121,7 @@ public class RaftClient {
 
         }
 
-        LOGGER.error("Client {} failed to connect to cluster", context.getLocalId());
+        LOGGER.error("Failure connecting to cluster", context.getLocalId());
         // failed to connect to a leader
         return null;
     }

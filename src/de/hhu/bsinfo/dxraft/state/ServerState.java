@@ -15,7 +15,7 @@ public class ServerState {
     private static final Logger LOGGER = LogManager.getLogger();
 
     public enum State {
-        JOINING, FOLLOWER, CANDIDATE, LEADER
+        FOLLOWER, CANDIDATE, LEADER
     }
 
     private State state = State.FOLLOWER;
@@ -151,9 +151,6 @@ public class ServerState {
         return state == State.LEADER;
     }
 
-    public boolean isJoining() {
-        return state == State.JOINING;
-    }
 
     public State getState() {
         return state;
@@ -186,13 +183,6 @@ public class ServerState {
         return votedFor;
     }
 
-    public void setStateJoining() {
-        if (state != State.FOLLOWER) {
-            throw new IllegalStateException("Server could not convert to joining because state is " + state.toString() + " but should be FOLLOWER!");
-        }
-        state = State.JOINING;
-    }
-
 
     /**
      * Changes the state to Leader. This happens when the server got a quorum of servers that voted for it.
@@ -202,7 +192,7 @@ public class ServerState {
             throw new IllegalStateException("Server could not convert to leader because state is " + state.toString() + " but should be CANDIDATE!");
         }
 
-        LOGGER.info("Server {} converting to Leader in term {}!", context.getLocalId(), currentTerm);
+        LOGGER.info("Server is now leader in term {}",  currentTerm);
 
         state = State.LEADER;
 
@@ -249,7 +239,7 @@ public class ServerState {
             throw new IllegalStateException("Server could not convert to candidate because state is " + state.toString() + " but should be FOLLOWER!");
         }
 
-        LOGGER.debug("Server {} converting to Candidate!", context.getLocalId());
+        LOGGER.info("Starting election...");
         state = State.CANDIDATE;
         resetStateAsCandidate();
     }
@@ -278,7 +268,7 @@ public class ServerState {
         // if server receives message with higher term it has to convert to follower
         // if it already is a follower, only reset the timer and clear the current vote
         if (state != State.FOLLOWER) {
-            LOGGER.debug("Server {} converting to Follower because received message with higher term!", context.getLocalId());
+            LOGGER.debug("Reverting state to follower because received message with higher term {}", term);
             convertStateToFollower();
         } else {
             resetStateAsFollower();
@@ -293,7 +283,7 @@ public class ServerState {
     }
 
     /**
-     * Setter only for unit tests
+     * Setter only unit tests
      */
     public void setState(State state) {
         this.state = state;
