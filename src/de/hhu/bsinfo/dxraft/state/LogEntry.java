@@ -12,7 +12,7 @@ public interface LogEntry extends Serializable {
 
     void updateClientRequest(ClientRequest request);
 
-    void onAppend(RaftServerContext context, ServerState state);
+    void onAppend(RaftServerContext context, ServerState state, StateMachine stateMachine);
     void commit(StateMachine stateMachine, RaftServerContext context);
     default void onRemove(RaftServerContext context) {}
 

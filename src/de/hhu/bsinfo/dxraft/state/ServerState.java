@@ -15,7 +15,7 @@ public class ServerState {
     private static final Logger LOGGER = LogManager.getLogger();
 
     public enum State {
-        FOLLOWER, CANDIDATE, LEADER
+        JOINING, FOLLOWER, CANDIDATE, LEADER
     }
 
     private State state = State.FOLLOWER;
@@ -131,7 +131,7 @@ public class ServerState {
         int newCommitIndex = log.getCommitIndex();
         for (int i = log.getCommitIndex() + 1; i <= log.getLastIndex(); i++) {
             final int index = i;
-            if (matchIndexMap.values().stream().filter(matchIndex -> matchIndex >= index).count() + 1 >= Math.ceil(context.getServerCount()/2.0) && log.getTermByIndex(i) == currentTerm) {
+            if (matchIndexMap.values().stream().filter(matchIndex -> matchIndex >= index).count() + 1 > context.getServerCount()/2.0 && log.getTermByIndex(i) == currentTerm) {
                 newCommitIndex = index;
             }
         }
@@ -149,6 +149,10 @@ public class ServerState {
 
     public boolean isLeader() {
         return state == State.LEADER;
+    }
+
+    public boolean isJoining() {
+        return state == State.JOINING;
     }
 
     public State getState() {
@@ -181,6 +185,14 @@ public class ServerState {
     public RaftID getVotedFor() {
         return votedFor;
     }
+
+    public void setStateJoining() {
+        if (state != State.FOLLOWER) {
+            throw new IllegalStateException("Server could not convert to joining because state is " + state.toString() + " but should be FOLLOWER!");
+        }
+        state = State.JOINING;
+    }
+
 
     /**
      * Changes the state to Leader. This happens when the server got a quorum of servers that voted for it.

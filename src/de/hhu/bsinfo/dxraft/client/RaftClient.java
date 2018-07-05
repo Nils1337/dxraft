@@ -6,9 +6,11 @@ import de.hhu.bsinfo.dxraft.context.RaftID;
 import de.hhu.bsinfo.dxraft.data.StringData;
 import de.hhu.bsinfo.dxraft.message.*;
 import de.hhu.bsinfo.dxraft.data.RaftData;
-import de.hhu.bsinfo.dxraft.test.DatagramNetworkService;
+import de.hhu.bsinfo.dxraft.net.DatagramNetworkService;
+import de.hhu.bsinfo.dxraft.net.RaftNetworkService;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import sun.print.resources.serviceui;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -18,15 +20,14 @@ import java.util.concurrent.ThreadLocalRandom;
 public class RaftClient {
 
     private static final Logger LOGGER = LogManager.getLogger();
-    public static final boolean debug = false;
 
     private static final int retryTimeout = 100;
     private static final int overallTryDuration = 10 * 1000;
 
     private RaftContext context;
-    private ClientNetworkService networkService;
+    private RaftNetworkService networkService;
 
-    public RaftClient(RaftContext context, ClientNetworkService networkService) {
+    public RaftClient(RaftContext context, RaftNetworkService networkService) {
         this.context = context;
         this.networkService = networkService;
     }
@@ -63,53 +64,77 @@ public class RaftClient {
         return null;
     }
 
-    private ClientResponse sendRequest(ClientRequest request) {
-        // select a random server to forward request to
-        int random = ThreadLocalRandom.current().nextInt(context.getServersIds().size());
-        RaftAddress serverAddress = context.getRaftServers().
-                get(random);
+    public boolean addServer(RaftAddress server) {
+        ClientResponse response = sendRequest(new AddServerRequest(server));
+        if (response != null) {
+            return response.isSuccess();
+        }
 
+        return false;
+    }
+
+    public boolean removeServer(RaftAddress server) {
+        ClientResponse response = sendRequest(new RemoveServerRequest(server));
+        if (response != null) {
+            return response.isSuccess();
+        }
+
+        return false;
+    }
+
+
+    private ClientResponse sendRequest(ClientRequest request) {
+        RaftAddress serverAddress = getRandomServer();
         long startTime = System.currentTimeMillis();
         long currentTime = System.currentTimeMillis();
-        while (currentTime - startTime + overallTryDuration > 0) {
+        while (startTime - currentTime + overallTryDuration > 0) {
 
             LOGGER.debug("Client {} sending request to server {}", context.getLocalId(), serverAddress);
 
             request.setReceiverAddress(serverAddress);
             RaftMessage response = networkService.sendRequest(request);
 
+            currentTime = System.currentTimeMillis();
+
+            if (response == null) {
+                LOGGER.debug("No response or other communication problem with server {}", serverAddress);
+                serverAddress = getRandomServer();
+                continue;
+            }
+
             if (response instanceof ClientResponse) {
                 LOGGER.debug("Client {} got response!", context.getLocalId());
                 return (ClientResponse) response;
             }
 
-            ClientRedirection redirection = (ClientRedirection) response;
+            if (response instanceof ClientRedirection) {
+                ClientRedirection redirection = (ClientRedirection) response;
 
-            LOGGER.debug("Client {} got redirection to server {}!", context.getLocalId(), redirection.getLeaderAddress());
+                LOGGER.debug("Client {} got redirection to server {}!", context.getLocalId(), redirection.getLeaderAddress());
 
-            if (redirection.getLeaderAddress() != null) {
-                serverAddress = redirection.getLeaderAddress();
-            } else {
-                try {
-                    Thread.sleep(retryTimeout);
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
+                if (redirection.getLeaderAddress() != null) {
+                    serverAddress = redirection.getLeaderAddress();
+                } else {
+                    serverAddress = getRandomServer();
                 }
-                // select other server randomly
-                random = ThreadLocalRandom.current().nextInt(context.getServersIds().size());
-                serverAddress = context.getRaftServers().get(random);
             }
 
-            currentTime = System.currentTimeMillis();
         }
 
+        LOGGER.error("Client {} failed to connect to cluster", context.getLocalId());
         // failed to connect to a leader
         return null;
     }
 
+    private RaftAddress getRandomServer() {
+        int random = ThreadLocalRandom.current().nextInt(context.getServersIds().size());
+        return context.getRaftServers().get(random);
+    }
 
     public static void main(String[] args) {
         short id = 3;
+
+        System.setProperty("serverId", "client");
 
         List<RaftAddress> servers = new ArrayList<>();
         for (int i = 0; i < 3; i++) {

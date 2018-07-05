@@ -27,7 +27,8 @@ public class ReadRequest extends ClientRequest {
 
     @Override
     public ClientResponse buildResponse() {
-        if (isCommitted()) {
+        RaftAddress address = getSenderAddress();
+        if (isCommitted() && address != null) {
             return new ClientResponse(getSenderAddress(), value);
         }
         return null;

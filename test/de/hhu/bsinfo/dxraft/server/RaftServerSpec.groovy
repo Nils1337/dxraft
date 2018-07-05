@@ -11,6 +11,7 @@ import de.hhu.bsinfo.dxraft.message.ReadRequest
 import de.hhu.bsinfo.dxraft.message.VoteRequest
 import de.hhu.bsinfo.dxraft.message.VoteResponse
 import de.hhu.bsinfo.dxraft.message.WriteRequest
+import de.hhu.bsinfo.dxraft.net.RaftNetworkService
 import de.hhu.bsinfo.dxraft.state.Log
 import de.hhu.bsinfo.dxraft.state.LogEntry
 import de.hhu.bsinfo.dxraft.state.ServerState
@@ -21,7 +22,7 @@ import spock.lang.Specification
 class RaftServerSpec extends Specification {
 
     def context = Mock(RaftServerContext)
-    def netService = Mock(ServerNetworkService)
+    def netService = Mock(RaftNetworkService)
     def log = Mock(Log)
     def timer = Mock(RaftTimer)
     def state = Mock(ServerState)

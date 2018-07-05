@@ -7,7 +7,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-public class Log extends ArrayList<LogEntry> {
+public class Log {
 
     private List<LogEntry> log = new ArrayList<>();
     private StateMachine stateMachine;
@@ -132,21 +132,6 @@ public class Log extends ArrayList<LogEntry> {
 
     public boolean isDiffering(int prevIndex, int prevTerm) {
         return getSize() <= prevIndex || (!log.isEmpty() && (prevIndex >= 0 && log.get(prevIndex).getTerm() != prevTerm));
-    }
-
-    /**
-     * Checks the matchIndexes of the followers to find a higher index where the logs of a majority of the servers match and
-     * the term is the current term of the leader and returns this index. Returns the current commit index if there is no such index.
-     */
-    public int getNewCommitIndex(Map<RaftID, Integer> matchIndexMap, int serverCount, int currentTerm) {
-        int newCommitIndex = getCommitIndex();
-        for (int i = getCommitIndex() + 1; i <= getLastIndex(); i++) {
-            final int index = i;
-            if (matchIndexMap.values().stream().filter(matchIndex -> matchIndex >= index).count() >= Math.ceil(serverCount/2.0) && log.get(i).getTerm() == currentTerm) {
-                newCommitIndex = index;
-            }
-        }
-        return newCommitIndex;
     }
 
     public static final class LogBuilder {

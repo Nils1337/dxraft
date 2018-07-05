@@ -6,9 +6,4 @@ public class StringData implements RaftData {
     public StringData(String data) {
         this.data = data;
     }
-
-    @Override
-    public String toString() {
-        return data;
-    }
 }

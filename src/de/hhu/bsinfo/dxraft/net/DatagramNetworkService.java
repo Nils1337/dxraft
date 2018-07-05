@@ -1,21 +1,17 @@
-package de.hhu.bsinfo.dxraft.test;
+package de.hhu.bsinfo.dxraft.net;
 
-import de.hhu.bsinfo.dxraft.client.ClientNetworkService;
 import de.hhu.bsinfo.dxraft.context.RaftAddress;
 import de.hhu.bsinfo.dxraft.context.RaftContext;
 import de.hhu.bsinfo.dxraft.context.RaftID;
 import de.hhu.bsinfo.dxraft.message.*;
-import de.hhu.bsinfo.dxraft.server.ServerNetworkService;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.io.*;
-import java.net.DatagramPacket;
-import java.net.DatagramSocket;
-import java.net.InetSocketAddress;
-import java.net.SocketAddress;
-import java.util.Queue;
-import java.util.concurrent.LinkedBlockingQueue;
+import java.net.*;
 
-public class DatagramNetworkService extends ServerNetworkService implements ClientNetworkService {
+public class DatagramNetworkService extends RaftNetworkService {
+    private static final Logger LOGGER = LogManager.getLogger();
 
     private static final int MAX_MESSAGE_SIZE = 65535;
     private RaftContext context;
@@ -37,7 +33,7 @@ public class DatagramNetworkService extends ServerNetworkService implements Clie
     @Override
     public RaftMessage sendRequest(ClientRequest request) {
         sendMessage(request);
-        return receiveMessage();
+        return receiveMessageWithTimeout();
     }
 
     @Override
@@ -58,6 +54,12 @@ public class DatagramNetworkService extends ServerNetworkService implements Clie
             if (receiverAddress == null) {
                 receiverAddress = context.getAddressById(message.getReceiverId());
             }
+
+            if (receiverAddress == null) {
+                LOGGER.error("Receiver of message " + message + " could not be determined");
+                return;
+            }
+
             SocketAddress socketAddress = new InetSocketAddress(receiverAddress.getIp(), receiverAddress.getPort());
 
             socket.send(new DatagramPacket(msg, msg.length, socketAddress));
@@ -75,13 +77,13 @@ public class DatagramNetworkService extends ServerNetworkService implements Clie
     }
 
     @Override
-    public void start() {
+    public void startReceiving() {
 
         receiverThread = new Thread(() -> {
             while (true) {
                 RaftMessage message = receiveMessage();
                 if (message instanceof MessageDeliverer) {
-                    ((MessageDeliverer) message).deliverMessage(messageReceiver);
+                    ((MessageDeliverer) message).deliverMessage(getMessageReceiver());
                 }
             }
         });
@@ -91,19 +93,34 @@ public class DatagramNetworkService extends ServerNetworkService implements Clie
     }
 
     @Override
-    public void stop() {
+    public void stopReceiving() {
         receiverThread.interrupt();
+    }
+
+    private RaftMessage receiveMessageWithTimeout() {
+        try {
+            byte[] buf = new byte[MAX_MESSAGE_SIZE];
+            DatagramPacket msg = new DatagramPacket(buf, buf.length);
+            socket.setSoTimeout(1000);
+            socket.receive(msg);
+            ObjectInputStream objIn = new ObjectInputStream(new ByteArrayInputStream(msg.getData()));
+            return (RaftMessage) objIn.readObject();
+        } catch (IOException | ClassNotFoundException e) {
+            LOGGER.trace("Error receiving message");
+        }
+        return null;
     }
 
     private RaftMessage receiveMessage() {
         try {
             byte[] buf = new byte[MAX_MESSAGE_SIZE];
             DatagramPacket msg = new DatagramPacket(buf, buf.length);
+            socket.setSoTimeout(0);
             socket.receive(msg);
             ObjectInputStream objIn = new ObjectInputStream(new ByteArrayInputStream(msg.getData()));
             return (RaftMessage) objIn.readObject();
         } catch (IOException | ClassNotFoundException e) {
-            e.printStackTrace();
+            LOGGER.trace("Error receiving message");
         }
         return null;
     }

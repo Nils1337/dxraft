@@ -1,16 +1,22 @@
 package de.hhu.bsinfo.dxraft.server;
 
+import de.hhu.bsinfo.dxraft.client.RaftClient;
 import de.hhu.bsinfo.dxraft.context.RaftAddress;
+import de.hhu.bsinfo.dxraft.context.RaftContext;
 import de.hhu.bsinfo.dxraft.context.RaftID;
+import de.hhu.bsinfo.dxraft.data.ClusterConfigData;
+import de.hhu.bsinfo.dxraft.data.SpecialPaths;
+import de.hhu.bsinfo.dxraft.net.RaftNetworkService;
 import de.hhu.bsinfo.dxraft.state.Log;
 import de.hhu.bsinfo.dxraft.message.*;
 import de.hhu.bsinfo.dxraft.state.LogEntry;
 import de.hhu.bsinfo.dxraft.state.ServerState;
-import de.hhu.bsinfo.dxraft.test.DatagramNetworkService;
+import de.hhu.bsinfo.dxraft.net.DatagramNetworkService;
 import de.hhu.bsinfo.dxraft.timer.RaftTimer;
 import de.hhu.bsinfo.dxraft.timer.TimeoutHandler;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.ThreadContext;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -19,7 +25,7 @@ public class RaftServer implements ServerMessageReceiver, TimeoutHandler {
 
     private static final Logger LOGGER = LogManager.getLogger();
 
-    private ServerNetworkService networkService;
+    private RaftNetworkService networkService;
     private RaftServerContext context;
     private ServerState state;
     private Log log;
@@ -27,7 +33,7 @@ public class RaftServer implements ServerMessageReceiver, TimeoutHandler {
 
     private boolean started = false;
 
-    public RaftServer(ServerNetworkService networkService, RaftServerContext context, ServerState state, Log log, RaftTimer timer) {
+    public RaftServer(RaftNetworkService networkService, RaftServerContext context, ServerState state, Log log, RaftTimer timer) {
         this.networkService = networkService;
         this.context = context;
         this.state = state;
@@ -35,20 +41,48 @@ public class RaftServer implements ServerMessageReceiver, TimeoutHandler {
         this.timer = timer;
     }
 
-
-    public void start() {
+    public void bootstrapNewCluster() {
         if (!started) {
+            LOGGER.info("Bootstrapping cluster...");
             networkService.setMessageReceiver(this);
             timer.setTimeoutHandler(this);
 
+            this.networkService.startReceiving();
             state.startTimer();
-            this.networkService.start();
+        }
+    }
+
+    /**
+     * Tries to join the existing cluster given in the context (sends an add server request)
+     *
+     * The context must contain the exact configuration given to the cluster at bootstrap, otherwise this server will believe the cluster is different than it really is.
+     */
+    public void joinExistingCluster() {
+        if (!started) {
+            LOGGER.info("Joining existing cluster...");
+            networkService.setMessageReceiver(this);
+            timer.setTimeoutHandler(this);
+
+            this.networkService.startReceiving();
+
+            RaftContext clientContext = new RaftContext(context.getRaftServers(), new RaftAddress("127.0.0.1", 6000));
+            //TODO later replace this with other network service implementation
+            RaftNetworkService clientNetworkService = new DatagramNetworkService(clientContext);
+
+            boolean success = new RaftClient(clientContext, clientNetworkService).addServer(context.getLocalAddress());
+            if (success) {
+                LOGGER.info("Successfully joined cluster");
+            } else {
+                networkService.stopReceiving();
+                LOGGER.error("Joining the cluster failed");
+            }
         }
     }
 
 
     @Override
     public synchronized void processVoteRequest(VoteRequest request) {
+
         checkTerm(request.getTerm());
 
         VoteResponse response;
@@ -75,7 +109,7 @@ public class RaftServer implements ServerMessageReceiver, TimeoutHandler {
                 state.updateVote(response.getSenderId(), true);
 
                 //check if server got quorum
-                if (state.getVotesCount() >= Math.ceil(context.getServerCount()/2.0)) {
+                if (state.getVotesCount() > context.getServerCount()/2.0) {
                     state.convertStateToLeader();
                     sendHeartbeat();
                 }
@@ -121,7 +155,7 @@ public class RaftServer implements ServerMessageReceiver, TimeoutHandler {
             // update state
             List<LogEntry> removedEntries = log.updateLog(request.getPrevLogIndex(), request.getEntries());
 
-            request.getEntries().forEach((entry) -> entry.onAppend(context, state));
+            request.getEntries().forEach((entry) -> entry.onAppend(context, state, log.getStateMachine()));
             removedEntries.forEach((entry) -> entry.onRemove(context));
             LOGGER.debug("Server {} received an append entries request and updated its log. The current matchIndex is {}!", context.getLocalId(), matchIndex);
         } else {
@@ -182,7 +216,7 @@ public class RaftServer implements ServerMessageReceiver, TimeoutHandler {
 
                             networkService.sendMessage(clientResponse);
                         } else {
-                            LOGGER.error("Server {} wanted to send a response to client but the log entry was not applied");
+                            LOGGER.trace("Server {} wanted to send a response but response could not be built");
                         }
                     }
                 }
@@ -194,6 +228,7 @@ public class RaftServer implements ServerMessageReceiver, TimeoutHandler {
 
     // TODO improve performance of configuration changes by catching up new servers before propagating the change to followers
     // TODO what happens if removed server is the leader?
+    // TODO prevent multiple concurrent configuration changes
     @Override
     public synchronized void processClientRequest(ClientRequest request) {
 
@@ -222,13 +257,13 @@ public class RaftServer implements ServerMessageReceiver, TimeoutHandler {
 
                         if (clientResponse == null) {
                             // this should not happen
-                            LOGGER.error("Server {} got request with already existent id which is not pending and has no response associated to it!", context.getLocalId());
+                            LOGGER.error("Server {} got request with already existent id but response could not be built", context.getLocalId());
                         } else {
                             networkService.sendMessage(clientResponse);
                         }
                     }
                 } else {
-                    request.onAppend(context, state);
+                    request.onAppend(context, state, log.getStateMachine());
                     log.append(request);
 
                     LOGGER.debug("Server {} got write request and is sending append entries requests to followers!", context.getLocalId());
@@ -344,7 +379,18 @@ public class RaftServer implements ServerMessageReceiver, TimeoutHandler {
             return;
         }
 
+        boolean join = false;
+
+        if (args.length > 1 && args[1].equals("--join")) {
+            join = true;
+        }
+
         short id = Short.parseShort(args[0]);
+
+        //for logging
+        System.setProperty("serverId", "server-" + id);
+
+
         List<RaftAddress> servers = new ArrayList<>();
         for (int i = 0; i < 3; i++) {
             servers.add(new RaftAddress(new RaftID(i), "127.0.0.1", 5000 + i));
@@ -363,11 +409,15 @@ public class RaftServer implements ServerMessageReceiver, TimeoutHandler {
                 .withContext(context)
                 .build();
 
-        server.start();
+        if (!join) {
+            server.bootstrapNewCluster();
+        } else {
+            server.joinExistingCluster();
+        }
     }
 
     public static final class RaftServerBuilder {
-        private ServerNetworkService networkService;
+        private RaftNetworkService networkService;
         private RaftServerContext context;
         private ServerState state;
         private Log log;
@@ -380,7 +430,7 @@ public class RaftServer implements ServerMessageReceiver, TimeoutHandler {
             return new RaftServerBuilder();
         }
 
-        public RaftServerBuilder withNetworkService(ServerNetworkService networkService) {
+        public RaftServerBuilder withNetworkService(RaftNetworkService networkService) {
             this.networkService = networkService;
             return this;
         }

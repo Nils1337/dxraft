@@ -1,5 +1,6 @@
 package de.hhu.bsinfo.dxraft.message;
 
+import de.hhu.bsinfo.dxraft.context.RaftAddress;
 import de.hhu.bsinfo.dxraft.data.RaftData;
 import de.hhu.bsinfo.dxraft.server.RaftServerContext;
 import de.hhu.bsinfo.dxraft.state.StateMachine;
@@ -26,7 +27,8 @@ public class DeleteRequest extends ClientRequest {
 
     @Override
     public ClientResponse buildResponse() {
-        if (isCommitted()) {
+        RaftAddress address = getSenderAddress();
+        if (isCommitted() && address != null) {
             return new ClientResponse(getSenderAddress(), deletedData);
         }
         return null;
