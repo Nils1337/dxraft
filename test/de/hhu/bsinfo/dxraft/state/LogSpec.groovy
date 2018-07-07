@@ -1,79 +1,70 @@
 package de.hhu.bsinfo.dxraft.state
 
-import de.hhu.bsinfo.dxraft.context.RaftID
-import de.hhu.bsinfo.dxraft.state.Log
-import de.hhu.bsinfo.dxraft.state.LogEntry
-import de.hhu.bsinfo.dxraft.state.StateMachine
-import spock.lang.Shared
+import de.hhu.bsinfo.dxraft.context.RaftContext
+import de.hhu.bsinfo.dxraft.log.Log
+import de.hhu.bsinfo.dxraft.log.LogEntry
+import de.hhu.bsinfo.dxraft.log.LogStorage
 import spock.lang.Specification
 
 
 class LogSpec extends Specification {
 
     def stateMachine = Mock(StateMachine)
-    def log = Log.LogBuilder.aLog()
-            .withStateMachine(stateMachine)
-            .build()
+    def context = Mock(RaftContext)
+    def logStorage = Mock(LogStorage)
+    def log = new Log(context, stateMachine, logStorage)
+
     def logEntries = []
 
-    def setupLog() {
+    def setup() {
+        logStorage.getSize() >> 3
+
         3.times {
             def entry = Mock(LogEntry)
             entry.getTerm() >> it + 1
             logEntries.push(entry)
-            log.append(entry)
+        }
+
+        logStorage.getEntriesByRange(_,_) >> {int fromIndex, int toIndex ->
+            logEntries[fromIndex..toIndex]
+        }
+
+        logStorage.getEntryByIndex(_) >> {int index ->
+            logEntries[index]
         }
     }
 
-    @Shared
-    def id1 = new RaftID(1)
-    @Shared
-    def id2 = new RaftID(2)
-    @Shared
-    def id3 = new RaftID(3)
 
-    def "test log state"() {
-        setup:
-            setupLog()
-        expect:
-            log.getLastIndex() == 2
-            log.getLastEntry().is(logEntries[2])
-            log.getSize() == 3
-            log.getCommitIndex() == -1
-            log.contains(logEntries[1])
-            log.getNewestEntries(1) == logEntries.drop(1)
+    def getNewEntries() {
+        (1..3).collect({
+            def entry = Mock(LogEntry)
+            entry.getTerm() >> it + 1
+            entry
+        })
     }
 
     def "test update commit index"() {
-        setup:
-            setupLog()
         when:
-            log.updateCommitIndex(1)
-        then:
-            log.getCommitIndex() == 1
-        when:
-            log.updateCommitIndex(3)
-        then:
-            thrown(IllegalArgumentException)
-        when:
-            log.updateCommitIndex(0)
-        then:
-            thrown(IllegalArgumentException)
-    }
+        log.commitEntries(1)
 
-    def "test up to date check with empty log"() {
-        expect:
-            log.isAtLeastAsUpToDateAs(lastTerm, lastIndex)
-        where:
-            lastTerm | lastIndex
-            2 | 1
-            1 | 2
-            3 | 3
+        then:
+        log.getCommitIndex() == 1
+        logEntries.each {entry -> 1 * entry.onCommit(*_)}
+
+        when:
+        log.commitEntries(3)
+
+        then:
+        thrown(IllegalArgumentException)
+
+        when:
+        log.commitEntries(0)
+
+        then:
+        thrown(IllegalArgumentException)
     }
 
     def "test up to date check"() {
-        setup:
-            setupLog()
         expect:
             log.isAtLeastAsUpToDateAs(lastTerm, lastIndex) == upd
         where:
@@ -85,19 +76,7 @@ class LogSpec extends Specification {
             4 | 4 || true
     }
 
-    def "test differing check with empty log"() {
-        expect:
-            log.isDiffering(prevIndex, prevTerm) == dif
-        where:
-            prevIndex | prevTerm || dif
-            1 | 1 || true
-            0 | 3 || true
-            -1 | -1 || false
-    }
-
     def "test differing check"() {
-        setup:
-            setupLog()
         expect:
             log.isDiffering(prevIndex, prevTerm) == dif
         where:
@@ -108,56 +87,48 @@ class LogSpec extends Specification {
             5 | 1 || true
     }
 
-    def setupUpdateLogTest() {
-        setupLog()
-        log.updateCommitIndex(0)
-        def newEntries = (1..3).collect({
-            def entry = Mock(LogEntry)
-            entry.getTerm() >> it + 2
-            entry
-        })
-        return newEntries
-    }
-
     def "test update log 1"() {
         setup:
-            def newEntries = setupUpdateLogTest()
+            def newEntries = getNewEntries()
+            log.commitEntries(0)
         when:
-            log.updateLog(-1, newEntries)
+            log.updateEntries(-1, newEntries)
         then:
             thrown(IllegalArgumentException)
     }
 
     def "test update log 2"() {
         setup:
-            def newEntries = setupUpdateLogTest()
+            def newEntries = getNewEntries()
         when:
-            def removedEntries = log.updateLog(0, newEntries)
+            log.updateEntries(0, newEntries)
         then:
-            log.getSize() == 4
-            log.get(0).is(logEntries[0])
-            3.times {
-                log.get(it+1).is(newEntries[it])
-            }
-
-            removedEntries == logEntries[1..-1]
+            1 * logStorage.removeEntriesByRange(0, 3)
+            newEntries.each {entry -> 1 * logStorage.append(entry)}
     }
 
     def "test update log 3"() {
         setup:
-            def newEntries = setupUpdateLogTest()
+            def newEntries = getNewEntries()
         when:
-            def removedEntries = log.updateLog(2, newEntries)
+            log.updateEntries(2, newEntries)
         then:
-            log.getSize() == 6
-            3.times {
-                log.get(it).is(logEntries[it])
-            }
-            3.times {
-                log.get(it+3).is(newEntries[it])
-            }
+            1 * logStorage.removeEntriesByRange(2, 3)
+            newEntries.each {entry -> 1 * logStorage.append(entry)}
+    }
 
-            removedEntries == []
+
+    def "test update log 4"() {
+        setup:
+        def newEntry = Mock(LogEntry)
+        newEntry.getTerm() >> 3
+
+        when:
+        log.updateEntries(2, [newEntry])
+
+        then:
+        0 * logStorage.removeEntriesByRange(_,_)
+        0 * log.append(_)
     }
 
 }

@@ -1,9 +1,8 @@
 package de.hhu.bsinfo.dxraft.state
 
 import de.hhu.bsinfo.dxraft.context.RaftID
+import de.hhu.bsinfo.dxraft.log.Log
 import de.hhu.bsinfo.dxraft.server.RaftServerContext
-import de.hhu.bsinfo.dxraft.state.Log
-import de.hhu.bsinfo.dxraft.state.ServerState
 import de.hhu.bsinfo.dxraft.timer.RaftTimer
 import spock.lang.Specification
 import spock.lang.Unroll

@@ -7,10 +7,9 @@ import de.hhu.bsinfo.dxraft.data.StringData;
 import de.hhu.bsinfo.dxraft.message.*;
 import de.hhu.bsinfo.dxraft.data.RaftData;
 import de.hhu.bsinfo.dxraft.net.DatagramNetworkService;
-import de.hhu.bsinfo.dxraft.net.RaftNetworkService;
+import de.hhu.bsinfo.dxraft.net.AbstractNetworkService;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import sun.print.resources.serviceui;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -25,9 +24,9 @@ public class RaftClient {
     private static final int overallTryDuration = 10 * 1000;
 
     private RaftContext context;
-    private RaftNetworkService networkService;
+    private AbstractNetworkService networkService;
 
-    public RaftClient(RaftContext context, RaftNetworkService networkService) {
+    public RaftClient(RaftContext context, AbstractNetworkService networkService) {
         this.context = context;
         this.networkService = networkService;
     }

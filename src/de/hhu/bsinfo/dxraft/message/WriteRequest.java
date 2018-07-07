@@ -1,13 +1,9 @@
 package de.hhu.bsinfo.dxraft.message;
 
 import de.hhu.bsinfo.dxraft.context.RaftAddress;
-import de.hhu.bsinfo.dxraft.data.ClusterConfigData;
+import de.hhu.bsinfo.dxraft.context.RaftContext;
 import de.hhu.bsinfo.dxraft.data.RaftData;
-import de.hhu.bsinfo.dxraft.data.SpecialPaths;
-import de.hhu.bsinfo.dxraft.server.RaftServerContext;
 import de.hhu.bsinfo.dxraft.state.StateMachine;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 
 public class WriteRequest extends ClientRequest {
 
@@ -28,7 +24,7 @@ public class WriteRequest extends ClientRequest {
     }
 
     @Override
-    public void commit(StateMachine stateMachine, RaftServerContext context) {
+    public void onCommit(RaftContext context, StateMachine stateMachine) {
         if (!isCommitted()) {
 
             // TODO move this check to somewhere else?
@@ -44,7 +40,7 @@ public class WriteRequest extends ClientRequest {
 
             stateMachine.write(path, value);
         }
-        super.commit(stateMachine, context);
+        super.onCommit(context, stateMachine);
     }
 
     @Override

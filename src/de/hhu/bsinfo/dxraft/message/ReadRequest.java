@@ -1,8 +1,8 @@
 package de.hhu.bsinfo.dxraft.message;
 
 import de.hhu.bsinfo.dxraft.context.RaftAddress;
+import de.hhu.bsinfo.dxraft.context.RaftContext;
 import de.hhu.bsinfo.dxraft.data.RaftData;
-import de.hhu.bsinfo.dxraft.server.RaftServerContext;
 import de.hhu.bsinfo.dxraft.state.StateMachine;
 
 public class ReadRequest extends ClientRequest {
@@ -18,11 +18,11 @@ public class ReadRequest extends ClientRequest {
     }
 
     @Override
-    public void commit(StateMachine stateMachine, RaftServerContext context) {
+    public void onCommit(RaftContext context, StateMachine stateMachine) {
         if (!isCommitted()) {
             value = stateMachine.read(path);
         }
-        super.commit(stateMachine, context);
+        super.onCommit(context, stateMachine);
     }
 
     @Override

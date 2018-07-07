@@ -1,7 +1,7 @@
 package de.hhu.bsinfo.dxraft.message;
 
 import de.hhu.bsinfo.dxraft.context.RaftID;
-import de.hhu.bsinfo.dxraft.state.LogEntry;
+import de.hhu.bsinfo.dxraft.log.LogEntry;
 import de.hhu.bsinfo.dxraft.server.ServerMessageReceiver;
 
 import java.util.List;

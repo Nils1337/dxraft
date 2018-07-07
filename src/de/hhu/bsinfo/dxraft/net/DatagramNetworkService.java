@@ -10,7 +10,7 @@ import org.apache.logging.log4j.Logger;
 import java.io.*;
 import java.net.*;
 
-public class DatagramNetworkService extends RaftNetworkService {
+public class DatagramNetworkService extends AbstractNetworkService {
     private static final Logger LOGGER = LogManager.getLogger();
 
     private static final int MAX_MESSAGE_SIZE = 65535;

@@ -1,8 +1,8 @@
 package de.hhu.bsinfo.dxraft.state;
 
 import de.hhu.bsinfo.dxraft.context.RaftID;
+import de.hhu.bsinfo.dxraft.log.Log;
 import de.hhu.bsinfo.dxraft.server.RaftServerContext;
-import de.hhu.bsinfo.dxraft.state.Log;
 import de.hhu.bsinfo.dxraft.timer.RaftTimer;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -125,7 +125,7 @@ public class ServerState {
 
     /**
      * Checks the matchIndexes of the followers to find a higher index where the logs of a majority of the servers match and
-     * the term is the current term of the leader and returns this index. Returns the current commit index if there is no such index.
+     * the term is the current term of the leader and returns this index. Returns the current onCommit index if there is no such index.
      */
     public int getNewCommitIndex() {
         int newCommitIndex = log.getCommitIndex();

@@ -1,6 +1,7 @@
 package de.hhu.bsinfo.dxraft.server
 
 import de.hhu.bsinfo.dxraft.context.RaftID
+import de.hhu.bsinfo.dxraft.log.Log
 import de.hhu.bsinfo.dxraft.message.AppendEntriesRequest
 import de.hhu.bsinfo.dxraft.message.AppendEntriesResponse
 import de.hhu.bsinfo.dxraft.message.ClientRedirection
@@ -11,9 +12,9 @@ import de.hhu.bsinfo.dxraft.message.ReadRequest
 import de.hhu.bsinfo.dxraft.message.VoteRequest
 import de.hhu.bsinfo.dxraft.message.VoteResponse
 import de.hhu.bsinfo.dxraft.message.WriteRequest
-import de.hhu.bsinfo.dxraft.net.RaftNetworkService
-import de.hhu.bsinfo.dxraft.state.Log
-import de.hhu.bsinfo.dxraft.state.LogEntry
+import de.hhu.bsinfo.dxraft.net.AbstractNetworkService
+
+import de.hhu.bsinfo.dxraft.log.LogEntry
 import de.hhu.bsinfo.dxraft.state.ServerState
 import de.hhu.bsinfo.dxraft.timer.RaftTimer
 import spock.lang.Shared
@@ -22,7 +23,7 @@ import spock.lang.Specification
 class RaftServerSpec extends Specification {
 
     def context = Mock(RaftServerContext)
-    def netService = Mock(RaftNetworkService)
+    def netService = Mock(AbstractNetworkService)
     def log = Mock(Log)
     def timer = Mock(RaftTimer)
     def state = Mock(ServerState)
@@ -185,10 +186,6 @@ class RaftServerSpec extends Specification {
                 Mock(LogEntry)
             })
 
-            def removedEntries = (1..2).collect(){
-                Mock(LogEntry)
-            }
-
             with (request) {
                 getTerm() >> 2
                 getPrevLogIndex() >> 2
@@ -204,24 +201,10 @@ class RaftServerSpec extends Specification {
 
         then:
 
-            // log should be updated correctly
-            1 * log.updateLog(2, requestEntries) >> removedEntries
-            requestEntries.each {entry ->
-                1 * entry.onAppend(*_)
-            }
-
-            // onRemove() should be called on removed entries
-            removedEntries.each {entry ->
-                1 * entry.onRemove(_)
-            }
+            1 * log.updateEntries(2, requestEntries)
 
             // commit index should be updated correctly
-            1 * log.updateCommitIndex(newCommitIndex) >> committedEntries
-
-            // entries should be committed
-            committedEntries.each { entry ->
-                1 * entry.commit(*_)
-            }
+            1 * log.commitEntries(newCommitIndex) >> committedEntries
 
         where:
             leaderIndex || newCommitIndex
@@ -257,18 +240,10 @@ class RaftServerSpec extends Specification {
 
         then:
             // log should be updated correctly
-            1 * log.updateLog(2, requestEntries) >> removedEntries
-            requestEntries.each {entry ->
-                1 * entry.onAppend(*_)
-            }
-
-            // onRemove() should be called on removed entries
-            removedEntries.each {entry ->
-                1 * entry.onRemove(_)
-            }
+            1 * log.updateEntries(2, requestEntries)
 
             // commit index should not be updated
-            0 * log.updateCommitIndex(_)
+            0 * log.commitEntries(_)
     }
 
     def "test unsuccessful append entries request"() {
@@ -283,7 +258,7 @@ class RaftServerSpec extends Specification {
             response.getSenderId() >> id1
 
             state.isLeader() >> isLeader
-            log.get(_) >> logEntry
+            log.getEntryByIndex(_) >> logEntry
             state.getNextIndex(id1) >> 1
 
             doSomething * state.decrementNextIndex(id1)
@@ -326,8 +301,8 @@ class RaftServerSpec extends Specification {
             server.processAppendEntriesResponse(response)
 
         then:
-            //commit index should be updated correctly
-            1 * log.updateCommitIndex(3) >> logEntries
+            //onCommit index should be updated correctly
+            1 * log.commitEntries(3) >> logEntries
 
             //response should be sent for every committed entry
             2 * netService.sendMessage(_)
@@ -363,7 +338,7 @@ class RaftServerSpec extends Specification {
             server.processClientRequest(request)
 
         then:
-            1 * request.commit(*_)
+            1 * request.onCommit(*_)
             1 * request.buildResponse() >> response
             1 * netService.sendMessage(response)
     }
@@ -382,7 +357,6 @@ class RaftServerSpec extends Specification {
 
         then:
             // should append to log
-            1 * request.onAppend(*_)
             1 * log.append(request)
 
             // should send append entries request to each follower
@@ -404,7 +378,6 @@ class RaftServerSpec extends Specification {
 
         then:
             // should append to log
-            1 * request.onAppend(*_)
             1 * log.append(request)
 
             // should send append entries request to each follower
@@ -421,7 +394,7 @@ class RaftServerSpec extends Specification {
 
             state.isLeader() >> true
             log.contains(_) >> true
-            log.get(_) >> logEntry
+            log.getEntryByIndex(_) >> logEntry
 
         when:
             server.processClientRequest(request)
@@ -441,7 +414,7 @@ class RaftServerSpec extends Specification {
 
             state.isLeader() >> true
             log.contains(_) >> true
-            log.get(_) >> logEntry
+            log.getEntryByIndex(_) >> logEntry
 
         when:
             server.processClientRequest(request)
