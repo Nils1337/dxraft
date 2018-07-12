@@ -3,6 +3,7 @@ package de.hhu.bsinfo.dxraft.log;
 import de.hhu.bsinfo.dxraft.context.RaftContext;
 import de.hhu.bsinfo.dxraft.state.StateMachine;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public class Log {
@@ -67,6 +68,13 @@ public class Log {
         return commitIndex;
     }
 
+    public List<LogEntry> getUncommittedEntries() {
+        if (logStorage.getSize() > commitIndex + 2) {
+            return logStorage.getEntriesByRange(commitIndex + 1, logStorage.getSize());
+        }
+        return new ArrayList<>();
+    }
+
     public StateMachine getStateMachine() {
         return stateMachine;
     }
@@ -88,6 +96,8 @@ public class Log {
         committedEntries.forEach(entry -> entry.onCommit(context, stateMachine));
         return committedEntries;
     }
+
+
 
 
     /**

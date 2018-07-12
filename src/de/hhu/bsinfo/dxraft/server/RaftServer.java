@@ -210,6 +210,21 @@ public class RaftServer implements ServerMessageReceiver, TimeoutHandler {
 
                     // send responses for every log entry that was handled by this server and is now committed
                     for (LogEntry entry: committedEntries) {
+
+                        if (entry instanceof AddServerRequest || entry instanceof RemoveServerRequest) {
+                            state.popPendingConfigChangeRequest();
+                            ClientRequest next = state.getPendingConfigChangeRequest();
+                            if (next != null) {
+                                log.append(next);
+
+                                LOGGER.debug("Continuing with next pending configuration change");
+                                // update logs of all servers
+                                for (RaftID server : context.getOtherServerIds()) {
+                                    sendAppendEntriesRequest(server);
+                                }
+                            }
+                        }
+
                         ClientResponse clientResponse = entry.buildResponse();
 
                         if (clientResponse != null) {
@@ -229,7 +244,6 @@ public class RaftServer implements ServerMessageReceiver, TimeoutHandler {
 
     // TODO improve performance of configuration changes by catching up new servers before propagating the change to followers
     // TODO what happens if removed server is the leader?
-    // TODO prevent multiple concurrent configuration changes
     @Override
     public synchronized void processClientRequest(ClientRequest request) {
 
@@ -264,6 +278,15 @@ public class RaftServer implements ServerMessageReceiver, TimeoutHandler {
                         }
                     }
                 } else {
+
+                    if (request.isConfigChangeRequest()) {
+                        state.addPendingConfigChangeRequest(request);
+                        if (state.configChangeRequestisPending()) {
+                            LOGGER.debug("Configuration change already in progress -> adding request to pending configuration change requests");
+                            return;
+                        }
+                    }
+
                     log.append(request);
 
                     LOGGER.debug("Received write request from client {} -> Sending append entries requests to followers", request.getSenderAddress());

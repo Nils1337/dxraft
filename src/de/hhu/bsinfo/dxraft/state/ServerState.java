@@ -2,12 +2,18 @@ package de.hhu.bsinfo.dxraft.state;
 
 import de.hhu.bsinfo.dxraft.context.RaftID;
 import de.hhu.bsinfo.dxraft.log.Log;
+import de.hhu.bsinfo.dxraft.log.LogEntry;
+import de.hhu.bsinfo.dxraft.message.AddServerRequest;
+import de.hhu.bsinfo.dxraft.message.ClientRequest;
+import de.hhu.bsinfo.dxraft.message.RemoveServerRequest;
 import de.hhu.bsinfo.dxraft.server.RaftServerContext;
 import de.hhu.bsinfo.dxraft.timer.RaftTimer;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 public class ServerState {
@@ -71,8 +77,45 @@ public class ServerState {
     }
 
     ///////////////////
-    //Leader state//
+    //Leader state/////
     ///////////////////
+
+    // save pending configuration requests because they are not allowed to be handled concurrently
+    private List<ClientRequest> pendingConfigChangeRequests = new ArrayList<>();
+
+    public void addPendingConfigChangeRequest(ClientRequest request) {
+        pendingConfigChangeRequests.add(request);
+    }
+
+    public ClientRequest popPendingConfigChangeRequest() {
+        if (pendingConfigChangeRequests.size() > 0) {
+            return pendingConfigChangeRequests.remove(0);
+        }
+        return null;
+    }
+
+    public ClientRequest getPendingConfigChangeRequest() {
+        if (pendingConfigChangeRequests.size() > 0) {
+            return pendingConfigChangeRequests.get(0);
+        }
+        return null;
+    }
+
+    public boolean configChangeRequestisPending() {
+        return pendingConfigChangeRequests.size() > 1;
+    }
+
+    private void resetPendingConfigChanges() {
+        pendingConfigChangeRequests.clear();
+
+        // if becoming leader, check if there is an uncommitted (pending) configuration change in the log and add it to the pending list
+        for (LogEntry logEntry : log.getUncommittedEntries()) {
+            if (logEntry instanceof AddServerRequest || logEntry instanceof RemoveServerRequest) {
+                ClientRequest request = (ClientRequest) logEntry;
+                pendingConfigChangeRequests.add(request);
+            }
+        }
+    }
 
     // map for the next indices to send to each server
     private Map<RaftID, Integer> nextIndexMap = new HashMap<>();
@@ -122,6 +165,11 @@ public class ServerState {
         Integer index = matchIndexMap.get(id);
         return index == null ? -1 : index;
     }
+
+
+    ///////////////////
+    //Other Methods////
+    ///////////////////
 
     /**
      * Checks the matchIndexes of the followers to find a higher index where the logs of a majority of the servers match and
@@ -198,6 +246,7 @@ public class ServerState {
 
         resetNextIndices();
         resetMatchIndices();
+        resetPendingConfigChanges();
 
         timer.reset(state);
     }
