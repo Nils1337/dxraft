@@ -1,7 +1,9 @@
 package de.hhu.bsinfo.dxraft.log;
 
 import de.hhu.bsinfo.dxraft.context.RaftContext;
+import de.hhu.bsinfo.dxraft.state.ServerState;
 import de.hhu.bsinfo.dxraft.state.StateMachine;
+import org.apache.logging.log4j.core.jmx.Server;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -11,11 +13,22 @@ public class Log {
     private int commitIndex = -1;
     private RaftContext context;
     private StateMachine stateMachine;
+    private ServerState state;
     private LogStorage logStorage;
 
-    public Log(RaftContext context, StateMachine stateMachine, LogStorage logStorage) {
+    public Log(RaftContext context) {
         this.context = context;
+    }
+
+    public void setStateMachine(StateMachine stateMachine) {
         this.stateMachine = stateMachine;
+    }
+
+    public void setState(ServerState state) {
+        this.state = state;
+    }
+
+    public void setLogStorage(LogStorage logStorage) {
         this.logStorage = logStorage;
     }
 
@@ -93,7 +106,7 @@ public class Log {
 
         // return committed entries
         List<LogEntry> committedEntries = logStorage.getEntriesByRange(oldCommitIndex + 1, newCommitIndex + 1);
-        committedEntries.forEach(entry -> entry.onCommit(context, stateMachine));
+        committedEntries.forEach(entry -> entry.onCommit(context, stateMachine, state));
         return committedEntries;
     }
 

@@ -31,7 +31,7 @@ public class RaftServer implements ServerMessageReceiver, TimeoutHandler {
 
     private boolean started = false;
 
-    public RaftServer(AbstractNetworkService networkService, RaftServerContext context, ServerState state, Log log, RaftTimer timer) {
+    private RaftServer(AbstractNetworkService networkService, RaftServerContext context, ServerState state, Log log, RaftTimer timer) {
         this.networkService = networkService;
         this.context = context;
         this.state = state;
@@ -56,7 +56,7 @@ public class RaftServer implements ServerMessageReceiver, TimeoutHandler {
             }
 
             this.networkService.startReceiving();
-            state.startTimer();
+            state.becomeActive();
         }
     }
 
@@ -242,8 +242,8 @@ public class RaftServer implements ServerMessageReceiver, TimeoutHandler {
     }
 
 
+    // TODO correctly implement read requests (prevent stale reads)
     // TODO improve performance of configuration changes by catching up new servers before propagating the change to followers
-    // TODO what happens if removed server is the leader?
     @Override
     public synchronized void processClientRequest(ClientRequest request) {
 
@@ -251,11 +251,10 @@ public class RaftServer implements ServerMessageReceiver, TimeoutHandler {
         if (state.isLeader()) {
 
             if (request.isReadRequest()) {
-                // TODO check with majority of servers if still leader
                 LOGGER.debug("Received read request from client {}", request.getSenderAddress());
 
                 ReadRequest readRequest = (ReadRequest) request;
-                readRequest.onCommit(context, log.getStateMachine());
+                readRequest.onCommit(context, log.getStateMachine(), state);
                 ClientResponse response = readRequest.buildResponse();
                 networkService.sendMessage(response);
             } else {
@@ -399,7 +398,7 @@ public class RaftServer implements ServerMessageReceiver, TimeoutHandler {
         for (String arg: args) {
             if (arg.startsWith("-id=")) {
                 id = Short.parseShort(arg.substring(4));
-            } else if (arg.equals("-initServerCount=")) {
+            } else if (arg.startsWith("-initServerCount=")) {
                 initServerCount = Integer.parseInt(arg.substring(17));
             } else if (arg.equals("--join")) {
                 join = true;
@@ -501,11 +500,11 @@ public class RaftServer implements ServerMessageReceiver, TimeoutHandler {
             }
 
             if (logStorage == null) {
-                logStorage = new InMemoryLog(context, stateMachine);
+                logStorage = new InMemoryLog(context);
             }
 
             if (log == null) {
-                log = new Log(context, stateMachine, logStorage);
+                log = new Log(context);
             }
 
             if (networkService == null) {
@@ -517,8 +516,18 @@ public class RaftServer implements ServerMessageReceiver, TimeoutHandler {
             }
 
             if (state == null) {
-                state = new ServerState(context, timer, log);
+                state = new ServerState(context);
             }
+
+            logStorage.setState(state);
+            logStorage.setStateMachine(stateMachine);
+
+            log.setLogStorage(logStorage);
+            log.setStateMachine(stateMachine);
+            log.setState(state);
+
+            state.setLog(log);
+            state.setTimer(timer);
 
             return new RaftServer(networkService, context, state, log, timer);
         }

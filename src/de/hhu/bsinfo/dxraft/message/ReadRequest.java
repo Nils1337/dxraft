@@ -3,6 +3,7 @@ package de.hhu.bsinfo.dxraft.message;
 import de.hhu.bsinfo.dxraft.context.RaftAddress;
 import de.hhu.bsinfo.dxraft.context.RaftContext;
 import de.hhu.bsinfo.dxraft.data.RaftData;
+import de.hhu.bsinfo.dxraft.state.ServerState;
 import de.hhu.bsinfo.dxraft.state.StateMachine;
 
 public class ReadRequest extends ClientRequest {
@@ -18,11 +19,11 @@ public class ReadRequest extends ClientRequest {
     }
 
     @Override
-    public void onCommit(RaftContext context, StateMachine stateMachine) {
+    public void onCommit(RaftContext context, StateMachine stateMachine, ServerState state) {
         if (!isCommitted()) {
             value = stateMachine.read(path);
         }
-        super.onCommit(context, stateMachine);
+        super.onCommit(context, stateMachine, state);
     }
 
     @Override

@@ -1,5 +1,8 @@
 package de.hhu.bsinfo.dxraft.log;
 
+import de.hhu.bsinfo.dxraft.state.ServerState;
+import de.hhu.bsinfo.dxraft.state.StateMachine;
+
 import java.util.List;
 
 public interface LogStorage {
@@ -18,4 +21,8 @@ public interface LogStorage {
     void removeEntriesByRange(int fromIndex, int toIndex);
 
     int indexOf(LogEntry logEntry);
+
+    void setStateMachine(StateMachine stateMachine);
+
+    void setState(ServerState state);
 }

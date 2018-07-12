@@ -3,6 +3,7 @@ package de.hhu.bsinfo.dxraft.message;
 import de.hhu.bsinfo.dxraft.context.RaftAddress;
 import de.hhu.bsinfo.dxraft.context.RaftContext;
 import de.hhu.bsinfo.dxraft.data.RaftData;
+import de.hhu.bsinfo.dxraft.state.ServerState;
 import de.hhu.bsinfo.dxraft.state.StateMachine;
 
 public class WriteRequest extends ClientRequest {
@@ -24,7 +25,7 @@ public class WriteRequest extends ClientRequest {
     }
 
     @Override
-    public void onCommit(RaftContext context, StateMachine stateMachine) {
+    public void onCommit(RaftContext context, StateMachine stateMachine, ServerState state) {
         if (!isCommitted()) {
 
             // TODO move this check to somewhere else?
@@ -40,7 +41,7 @@ public class WriteRequest extends ClientRequest {
 
             stateMachine.write(path, value);
         }
-        super.onCommit(context, stateMachine);
+        super.onCommit(context, stateMachine, state);
     }
 
     @Override

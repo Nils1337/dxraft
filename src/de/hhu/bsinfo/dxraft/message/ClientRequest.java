@@ -4,6 +4,7 @@ package de.hhu.bsinfo.dxraft.message;
 import de.hhu.bsinfo.dxraft.context.RaftContext;
 import de.hhu.bsinfo.dxraft.server.ServerMessageReceiver;
 import de.hhu.bsinfo.dxraft.log.LogEntry;
+import de.hhu.bsinfo.dxraft.state.ServerState;
 import de.hhu.bsinfo.dxraft.state.StateMachine;
 
 import java.util.Objects;
@@ -58,7 +59,7 @@ public abstract class ClientRequest extends RaftMessage implements MessageDelive
     }
 
     @Override
-    public void onCommit(RaftContext context, StateMachine stateMachine) {
+    public void onCommit(RaftContext context, StateMachine stateMachine, ServerState state) {
         committed = true;
     }
 

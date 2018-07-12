@@ -4,6 +4,7 @@ import de.hhu.bsinfo.dxraft.context.RaftAddress;
 import de.hhu.bsinfo.dxraft.context.RaftContext;
 import de.hhu.bsinfo.dxraft.data.ClusterConfigData;
 import de.hhu.bsinfo.dxraft.data.SpecialPaths;
+import de.hhu.bsinfo.dxraft.state.ServerState;
 import de.hhu.bsinfo.dxraft.state.StateMachine;
 
 public class RemoveServerRequest extends ClientRequest {
@@ -21,8 +22,8 @@ public class RemoveServerRequest extends ClientRequest {
     }
 
     @Override
-    public void onAppend(RaftContext context, StateMachine stateMachine) {
-        super.onAppend(context, stateMachine);
+    public void onAppend(RaftContext context, StateMachine stateMachine, ServerState state) {
+        super.onAppend(context, stateMachine, state);
         if (!serverRemoved) {
             context.removeServer(oldServer);
             stateMachine.write(SpecialPaths.CLUSTER_CONFIG_PATH, new ClusterConfigData(context.getRaftServers()));
@@ -44,6 +45,14 @@ public class RemoveServerRequest extends ClientRequest {
         if (serverRemoved) {
             context.addServer(oldServer);
             serverRemoved = false;
+        }
+    }
+
+    @Override
+    public void onCommit(RaftContext context, StateMachine stateMachine, ServerState state) {
+        if (oldServer.equals(context.getLocalAddress())) {
+            // if the removed server is the server itself, it should now stop taking part in the cluster
+            state.becomeIdle();
         }
     }
 }

@@ -28,10 +28,8 @@ public class ServerState {
     private RaftTimer timer;
     private RaftServerContext context;
 
-    public ServerState(RaftServerContext context, RaftTimer timer, Log log) {
+    public ServerState(RaftServerContext context) {
         this.context = context;
-        this.timer = timer;
-        this.log = log;
     }
 
     ////////////////
@@ -55,6 +53,10 @@ public class ServerState {
     // Server that this server believes is the current leader
     private RaftID currentLeader;
 
+    // in idle state, timer is not started
+    // -> server still answers vote and append entries request but does not try to become leader
+    private boolean idle = true;
+
     ///////////////////
     //Candidate state//
     ///////////////////
@@ -66,7 +68,15 @@ public class ServerState {
      * The total amount of granted votes including the vote of the server itself
      */
     public long getVotesCount() {
-        return votesMap.values().stream().filter((value) -> value).count() + 1;
+        long votes = votesMap.values().stream().filter((value) -> value).count();
+
+        // Only count the vote for itself if the server is part of its own configuration.
+        // The removal of the server from the configuration might be pending but not committed, during which the server
+        // should operate normally but should not count its own vote
+        if (context.getRaftServers().contains(context.getLocalAddress())) {
+            votes++;
+        }
+        return  votes;
     }
 
     public void updateVote(RaftID id, boolean voteGranted) {
@@ -224,7 +234,10 @@ public class ServerState {
             throw new IllegalStateException("Server could not set vote because state is " + state.toString() + " but should be FOLLOWER!");
         }
         this.votedFor = votedFor;
-        timer.reset(state);
+
+        if (!idle) {
+            timer.reset(state);
+        }
     }
 
     public RaftID getVotedFor() {
@@ -276,8 +289,10 @@ public class ServerState {
         if (state != State.FOLLOWER) {
             throw new IllegalStateException("Server could not be reset because state is " + state.toString() + " but should be FOLLOWER!");
         }
+        if (!idle) {
+            timer.reset(state);
+        }
 
-        timer.reset(state);
     }
 
     /**
@@ -305,6 +320,23 @@ public class ServerState {
         timer.reset(state);
     }
 
+    public void becomeIdle() {
+        timer.cancel();
+        idle = true;
+        if (state != State.FOLLOWER) {
+            convertStateToFollower();
+        }
+
+        LOGGER.info("Server is now idle and can be shutdown");
+    }
+
+    public void becomeActive() {
+        idle = false;
+        timer.reset(state);
+
+        LOGGER.info("Server is now active");
+    }
+
     /**
      * Checks if the term of the message is higher than the local term. If this is the case, state is changed to follower.
      * @param term
@@ -327,14 +359,18 @@ public class ServerState {
         votedFor = null;
     }
 
-    public void startTimer() {
-        timer.reset(state);
-    }
-
     /**
-     * Setter only unit tests
+     * Setter only for unit tests
      */
     public void setState(State state) {
         this.state = state;
+    }
+
+    public void setTimer(RaftTimer timer) {
+        this.timer = timer;
+    }
+
+    public void setLog(Log log) {
+        this.log = log;
     }
 }
