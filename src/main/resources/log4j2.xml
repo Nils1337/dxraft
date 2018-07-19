@@ -1,23 +1,15 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Configuration status="warn">
-    <Properties>
-        <Property name="filename">out/test.log</Property>
-    </Properties>
-
     <Appenders>
         <Routing name="RoutingAppender">
             <Routes pattern="${sys:serverId}">
                 <Route>
-                    <File name="${sys:serverId}" append="false" fileName="out/raft-${sys:serverId}.log">
+                    <File name="${sys:serverId}" append="false" fileName="log/raft-${sys:serverId}.log">
                         <PatternLayout pattern="%highlight{[%d{HH:mm:ss.SSS}][%t][%-5level][%logger{36}] %msg%n}{FATAL=red, ERROR=red, WARN=yellow, INFO=blue, DEBUG=green, TRACE=white}"/>
                     </File>
                 </Route>
             </Routes>
         </Routing>
-
-<!--        <File name="File" fileName="${filename}">
-            <PatternLayout pattern="%highlight{[%d{HH:mm:ss.SSS}][%t][%-5level][%logger{36}] %msg%n}{FATAL=red, ERROR=red, WARN=yellow, INFO=blue, DEBUG=green, TRACE=white}"/>
-        </File> -->
 
         <Console name="Console" target="SYSTEM_OUT">
             <PatternLayout pattern="%msg%n" />
