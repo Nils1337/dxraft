@@ -1,8 +1,8 @@
 package de.hhu.bsinfo.dxraft.log;
 
 import de.hhu.bsinfo.dxraft.context.RaftContext;
-import de.hhu.bsinfo.dxraft.message.ClientRequest;
-import de.hhu.bsinfo.dxraft.message.ClientResponse;
+import de.hhu.bsinfo.dxraft.message.client.ClientRequest;
+import de.hhu.bsinfo.dxraft.message.server.ClientResponse;
 import de.hhu.bsinfo.dxraft.state.ServerState;
 import de.hhu.bsinfo.dxraft.state.StateMachine;
 

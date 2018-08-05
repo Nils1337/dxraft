@@ -1,9 +1,10 @@
-package de.hhu.bsinfo.dxraft.message;
+package de.hhu.bsinfo.dxraft.message.client;
 
 import de.hhu.bsinfo.dxraft.context.RaftAddress;
 import de.hhu.bsinfo.dxraft.context.RaftContext;
 import de.hhu.bsinfo.dxraft.data.ClusterConfigData;
 import de.hhu.bsinfo.dxraft.data.SpecialPaths;
+import de.hhu.bsinfo.dxraft.message.server.ClientResponse;
 import de.hhu.bsinfo.dxraft.state.ServerState;
 import de.hhu.bsinfo.dxraft.state.StateMachine;
 

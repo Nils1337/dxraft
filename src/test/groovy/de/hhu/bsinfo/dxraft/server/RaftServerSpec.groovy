@@ -2,16 +2,16 @@ package de.hhu.bsinfo.dxraft.server
 
 import de.hhu.bsinfo.dxraft.context.RaftID
 import de.hhu.bsinfo.dxraft.log.Log
-import de.hhu.bsinfo.dxraft.message.AppendEntriesRequest
-import de.hhu.bsinfo.dxraft.message.AppendEntriesResponse
-import de.hhu.bsinfo.dxraft.message.ClientRedirection
-import de.hhu.bsinfo.dxraft.message.ClientRequest
-import de.hhu.bsinfo.dxraft.message.ClientResponse
-import de.hhu.bsinfo.dxraft.message.DeleteRequest
-import de.hhu.bsinfo.dxraft.message.ReadRequest
-import de.hhu.bsinfo.dxraft.message.VoteRequest
-import de.hhu.bsinfo.dxraft.message.VoteResponse
-import de.hhu.bsinfo.dxraft.message.WriteRequest
+import de.hhu.bsinfo.dxraft.message.server.AppendEntriesRequest
+import de.hhu.bsinfo.dxraft.message.server.AppendEntriesResponse
+import de.hhu.bsinfo.dxraft.message.server.ClientRedirection
+import de.hhu.bsinfo.dxraft.message.client.ClientRequest
+import de.hhu.bsinfo.dxraft.message.server.ClientResponse
+import de.hhu.bsinfo.dxraft.message.client.DeleteRequest
+import de.hhu.bsinfo.dxraft.message.client.ReadRequest
+import de.hhu.bsinfo.dxraft.message.server.VoteRequest
+import de.hhu.bsinfo.dxraft.message.server.VoteResponse
+import de.hhu.bsinfo.dxraft.message.client.WriteRequest
 import de.hhu.bsinfo.dxraft.net.AbstractNetworkService
 
 import de.hhu.bsinfo.dxraft.log.LogEntry

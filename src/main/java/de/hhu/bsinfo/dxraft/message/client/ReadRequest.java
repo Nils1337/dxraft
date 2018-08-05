@@ -1,16 +1,17 @@
-package de.hhu.bsinfo.dxraft.message;
+package de.hhu.bsinfo.dxraft.message.client;
 
 import de.hhu.bsinfo.dxraft.context.RaftAddress;
 import de.hhu.bsinfo.dxraft.context.RaftContext;
 import de.hhu.bsinfo.dxraft.data.RaftData;
+import de.hhu.bsinfo.dxraft.message.server.ClientResponse;
 import de.hhu.bsinfo.dxraft.state.ServerState;
 import de.hhu.bsinfo.dxraft.state.StateMachine;
 
-public class DeleteRequest extends ClientRequest {
+public class ReadRequest extends ClientRequest {
     private String path;
-    private RaftData deletedData;
+    private RaftData value;
 
-    public DeleteRequest(String path) {
+    public ReadRequest(String path) {
         this.path = path;
     }
 
@@ -21,7 +22,7 @@ public class DeleteRequest extends ClientRequest {
     @Override
     public void onCommit(RaftContext context, StateMachine stateMachine, ServerState state) {
         if (!isCommitted()) {
-            deletedData = stateMachine.delete(path);
+            value = stateMachine.read(path);
         }
         super.onCommit(context, stateMachine, state);
     }
@@ -30,7 +31,7 @@ public class DeleteRequest extends ClientRequest {
     public ClientResponse buildResponse() {
         RaftAddress address = getSenderAddress();
         if (isCommitted() && address != null) {
-            return new ClientResponse(getSenderAddress(), deletedData);
+            return new ClientResponse(getSenderAddress(), value);
         }
         return null;
     }

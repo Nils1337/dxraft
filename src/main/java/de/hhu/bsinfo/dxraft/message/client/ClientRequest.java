@@ -1,7 +1,9 @@
-package de.hhu.bsinfo.dxraft.message;
+package de.hhu.bsinfo.dxraft.message.client;
 
 
 import de.hhu.bsinfo.dxraft.context.RaftContext;
+import de.hhu.bsinfo.dxraft.message.MessageDeliverer;
+import de.hhu.bsinfo.dxraft.message.RaftMessage;
 import de.hhu.bsinfo.dxraft.server.ServerMessageReceiver;
 import de.hhu.bsinfo.dxraft.log.LogEntry;
 import de.hhu.bsinfo.dxraft.state.ServerState;

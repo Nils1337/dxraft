@@ -1,6 +1,6 @@
 package de.hhu.bsinfo.dxraft.net;
 
-import de.hhu.bsinfo.dxraft.message.ClientRequest;
+import de.hhu.bsinfo.dxraft.message.client.ClientRequest;
 import de.hhu.bsinfo.dxraft.message.RaftMessage;
 import de.hhu.bsinfo.dxraft.server.ServerMessageReceiver;
 

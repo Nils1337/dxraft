@@ -4,6 +4,8 @@ import de.hhu.bsinfo.dxraft.context.RaftAddress;
 import de.hhu.bsinfo.dxraft.context.RaftContext;
 import de.hhu.bsinfo.dxraft.context.RaftID;
 import de.hhu.bsinfo.dxraft.message.*;
+import de.hhu.bsinfo.dxraft.message.client.ClientRequest;
+
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 

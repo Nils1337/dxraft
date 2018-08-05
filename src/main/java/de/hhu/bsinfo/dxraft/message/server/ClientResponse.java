@@ -1,9 +1,10 @@
-package de.hhu.bsinfo.dxraft.message;
+package de.hhu.bsinfo.dxraft.message.server;
 
 
 import de.hhu.bsinfo.dxraft.context.RaftAddress;
 import de.hhu.bsinfo.dxraft.context.RaftID;
 import de.hhu.bsinfo.dxraft.data.RaftData;
+import de.hhu.bsinfo.dxraft.message.RaftMessage;
 
 public class ClientResponse extends RaftMessage {
 

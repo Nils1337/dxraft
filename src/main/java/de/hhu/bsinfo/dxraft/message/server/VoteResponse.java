@@ -1,6 +1,7 @@
-package de.hhu.bsinfo.dxraft.message;
+package de.hhu.bsinfo.dxraft.message.server;
 
 import de.hhu.bsinfo.dxraft.context.RaftID;
+import de.hhu.bsinfo.dxraft.message.server.ServerMessage;
 import de.hhu.bsinfo.dxraft.server.ServerMessageReceiver;
 
 public class VoteResponse extends ServerMessage {

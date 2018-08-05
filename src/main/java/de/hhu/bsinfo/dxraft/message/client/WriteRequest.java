@@ -1,8 +1,9 @@
-package de.hhu.bsinfo.dxraft.message;
+package de.hhu.bsinfo.dxraft.message.client;
 
 import de.hhu.bsinfo.dxraft.context.RaftAddress;
 import de.hhu.bsinfo.dxraft.context.RaftContext;
 import de.hhu.bsinfo.dxraft.data.RaftData;
+import de.hhu.bsinfo.dxraft.message.server.ClientResponse;
 import de.hhu.bsinfo.dxraft.state.ServerState;
 import de.hhu.bsinfo.dxraft.state.StateMachine;
 
@@ -10,6 +11,7 @@ public class WriteRequest extends ClientRequest {
 
     private String path;
     private RaftData value;
+    private transient boolean success;
 
     public WriteRequest(String path, RaftData value) {
         this.path = path;
@@ -27,19 +29,12 @@ public class WriteRequest extends ClientRequest {
     @Override
     public void onCommit(RaftContext context, StateMachine stateMachine, ServerState state) {
         if (!isCommitted()) {
-
-            // TODO move this check to somewhere else?
-//            if (path.equals(SpecialPaths.CLUSTER_CONFIG_PATH)) {
-//                try {
-//                    ClusterConfigData data = (ClusterConfigData) value;
-//                    context.getRaftServers().clear();
-//                    context.getRaftServers().addAll(data.getServers());
-//                } catch (ClassCastException e) {
-//                    throw new IllegalArgumentException("Path \""+ SpecialPaths.CLUSTER_CONFIG_PATH + "\" is reserved for cluster configuration!");
-//                }
-//            }
-
-            stateMachine.write(path, value);
+            if (stateMachine.read(path) != null) {
+                stateMachine.write(path, value);
+                success = true;
+            } else {
+                success = false;
+            }
         }
         super.onCommit(context, stateMachine, state);
     }
@@ -48,7 +43,7 @@ public class WriteRequest extends ClientRequest {
     public ClientResponse buildResponse() {
         RaftAddress address = getSenderAddress();
         if (isCommitted() && address != null) {
-            return new ClientResponse(getSenderAddress(), true);
+            return new ClientResponse(getSenderAddress(), success);
         }
         return null;
     }

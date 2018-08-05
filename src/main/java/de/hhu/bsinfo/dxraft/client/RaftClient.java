@@ -6,6 +6,16 @@ import de.hhu.bsinfo.dxraft.context.RaftID;
 import de.hhu.bsinfo.dxraft.data.StringData;
 import de.hhu.bsinfo.dxraft.message.*;
 import de.hhu.bsinfo.dxraft.data.RaftData;
+import de.hhu.bsinfo.dxraft.message.client.AddServerRequest;
+import de.hhu.bsinfo.dxraft.message.client.ClientRequest;
+import de.hhu.bsinfo.dxraft.message.client.CreateRequest;
+import de.hhu.bsinfo.dxraft.message.client.DeleteRequest;
+import de.hhu.bsinfo.dxraft.message.client.ReadRequest;
+import de.hhu.bsinfo.dxraft.message.client.RemoveServerRequest;
+import de.hhu.bsinfo.dxraft.message.client.WriteOrCreateRequest;
+import de.hhu.bsinfo.dxraft.message.client.WriteRequest;
+import de.hhu.bsinfo.dxraft.message.server.ClientRedirection;
+import de.hhu.bsinfo.dxraft.message.server.ClientResponse;
 import de.hhu.bsinfo.dxraft.net.DatagramNetworkService;
 import de.hhu.bsinfo.dxraft.net.AbstractNetworkService;
 import org.apache.logging.log4j.LogManager;
@@ -45,8 +55,26 @@ public class RaftClient {
         return null;
     }
 
+    public boolean create(String path, RaftData value) {
+        ClientResponse response = sendRequest(new CreateRequest(path, value));
+        if (response != null) {
+            return response.isSuccess();
+        }
+
+        return false;
+    }
+
     public boolean write(String path, RaftData value) {
         ClientResponse response = sendRequest(new WriteRequest(path, value));
+        if (response != null) {
+            return response.isSuccess();
+        }
+
+        return false;
+    }
+
+    public boolean writeOrCreate(String path, RaftData value) {
+        ClientResponse response = sendRequest(new WriteOrCreateRequest(path, value));
         if (response != null) {
             return response.isSuccess();
         }
