@@ -9,17 +9,25 @@ import de.hhu.bsinfo.dxraft.state.StateMachine;
 
 public class WriteRequest extends ClientRequest {
 
-    private String path;
+    private String name;
     private RaftData value;
+    private boolean overwrite = true;
+
     private transient boolean success;
 
+    public WriteRequest(String name, RaftData value, boolean overwrite) {
+        this.name = name;
+        this.value = value;
+        this.overwrite = overwrite;
+    }
+
     public WriteRequest(String path, RaftData value) {
-        this.path = path;
+        this.name = path;
         this.value = value;
     }
 
     public String getPath() {
-        return path;
+        return name;
     }
 
     public RaftData getValue() {
@@ -29,8 +37,9 @@ public class WriteRequest extends ClientRequest {
     @Override
     public void onCommit(RaftContext context, StateMachine stateMachine, ServerState state) {
         if (!isCommitted()) {
-            if (stateMachine.read(path) != null) {
-                stateMachine.write(path, value);
+            RaftData data = stateMachine.read(name);
+            if (overwrite || data == null) {
+                stateMachine.write(name, value);
                 success = true;
             } else {
                 success = false;

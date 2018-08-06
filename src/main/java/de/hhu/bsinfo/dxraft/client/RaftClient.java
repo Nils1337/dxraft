@@ -3,16 +3,19 @@ package de.hhu.bsinfo.dxraft.client;
 import de.hhu.bsinfo.dxraft.context.RaftAddress;
 import de.hhu.bsinfo.dxraft.context.RaftContext;
 import de.hhu.bsinfo.dxraft.context.RaftID;
+import de.hhu.bsinfo.dxraft.data.ClusterConfigData;
+import de.hhu.bsinfo.dxraft.data.ServerData;
+import de.hhu.bsinfo.dxraft.data.SpecialPaths;
 import de.hhu.bsinfo.dxraft.data.StringData;
 import de.hhu.bsinfo.dxraft.message.*;
 import de.hhu.bsinfo.dxraft.data.RaftData;
 import de.hhu.bsinfo.dxraft.message.client.AddServerRequest;
 import de.hhu.bsinfo.dxraft.message.client.ClientRequest;
-import de.hhu.bsinfo.dxraft.message.client.CreateRequest;
+import de.hhu.bsinfo.dxraft.message.client.DeleteListRequest;
+import de.hhu.bsinfo.dxraft.message.client.WriteListRequest;
 import de.hhu.bsinfo.dxraft.message.client.DeleteRequest;
 import de.hhu.bsinfo.dxraft.message.client.ReadRequest;
 import de.hhu.bsinfo.dxraft.message.client.RemoveServerRequest;
-import de.hhu.bsinfo.dxraft.message.client.WriteOrCreateRequest;
 import de.hhu.bsinfo.dxraft.message.client.WriteRequest;
 import de.hhu.bsinfo.dxraft.message.server.ClientRedirection;
 import de.hhu.bsinfo.dxraft.message.server.ClientResponse;
@@ -55,8 +58,17 @@ public class RaftClient {
         return null;
     }
 
-    public boolean create(String path, RaftData value) {
-        ClientResponse response = sendRequest(new CreateRequest(path, value));
+    public boolean exists(String name) {
+        ClientResponse response = sendRequest(new ReadRequest(name));
+        if (response != null) {
+            return response.getValue() != null;
+        }
+
+        return false;
+    }
+
+    public boolean write(String name, RaftData value) {
+        ClientResponse response = sendRequest(new WriteRequest(name, value));
         if (response != null) {
             return response.isSuccess();
         }
@@ -64,8 +76,8 @@ public class RaftClient {
         return false;
     }
 
-    public boolean write(String path, RaftData value) {
-        ClientResponse response = sendRequest(new WriteRequest(path, value));
+    public boolean write(String name, RaftData value, boolean overwrite) {
+        ClientResponse response = sendRequest(new WriteRequest(name, value, overwrite));
         if (response != null) {
             return response.isSuccess();
         }
@@ -73,22 +85,58 @@ public class RaftClient {
         return false;
     }
 
-    public boolean writeOrCreate(String path, RaftData value) {
-        ClientResponse response = sendRequest(new WriteOrCreateRequest(path, value));
-        if (response != null) {
-            return response.isSuccess();
-        }
-
-        return false;
-    }
-
-    public RaftData delete(String path) {
-        ClientResponse response = sendRequest(new DeleteRequest(path));
+    public RaftData delete(String name) {
+        ClientResponse response = sendRequest(new DeleteRequest(name));
         if (response != null) {
             return response.getValue();
         }
 
         return null;
+    }
+
+    public List<RaftData> readList(String name) {
+        ClientResponse response = sendRequest(new ReadRequest(name));
+        if (response != null) {
+            return response.getListValue();
+        }
+
+        return null;
+    }
+
+    public boolean listExists(String name) {
+        ClientResponse response = sendRequest(new ReadRequest(name));
+        if (response != null) {
+            return response.getValue() != null;
+        }
+
+        return false;
+    }
+
+    public boolean writeList(String name, List<RaftData> value) {
+        ClientResponse response = sendRequest(new WriteListRequest(name, value));
+        if (response != null) {
+            return response.isSuccess();
+        }
+
+        return false;
+    }
+
+    public boolean writeList(String name, List<RaftData> value, boolean overwrite) {
+        ClientResponse response = sendRequest(new WriteListRequest(name, value, overwrite));
+        if (response != null) {
+            return response.isSuccess();
+        }
+
+        return false;
+    }
+
+    public boolean deleteList(String name) {
+        ClientResponse response = sendRequest(new DeleteListRequest(name));
+        if (response != null) {
+            return response.isSuccess();
+        }
+
+        return false;
     }
 
     public boolean addServer(RaftAddress server) {
@@ -107,6 +155,24 @@ public class RaftClient {
         }
 
         return false;
+    }
+
+    public RaftAddress getCurrentLeader() {
+        ClientResponse response = sendRequest(new ReadRequest(SpecialPaths.LEADER_PATH));
+        if (response != null && response.getValue() instanceof ServerData) {
+            return ((ServerData) response.getValue()).getServer();
+        }
+
+        return null;
+    }
+
+    public List<RaftAddress> getCurrentConfig() {
+        ClientResponse response = sendRequest(new ReadRequest(SpecialPaths.LEADER_PATH));
+        if (response != null && response.getValue() instanceof ClusterConfigData) {
+            return ((ClusterConfigData) response.getValue()).getServers();
+        }
+
+        return null;
     }
 
 

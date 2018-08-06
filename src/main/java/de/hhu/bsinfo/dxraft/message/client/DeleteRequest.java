@@ -8,21 +8,21 @@ import de.hhu.bsinfo.dxraft.state.ServerState;
 import de.hhu.bsinfo.dxraft.state.StateMachine;
 
 public class DeleteRequest extends ClientRequest {
-    private String path;
+    private String name;
     private RaftData deletedData;
 
-    public DeleteRequest(String path) {
-        this.path = path;
+    public DeleteRequest(String name) {
+        this.name = name;
     }
 
     public String getPath() {
-        return path;
+        return name;
     }
 
     @Override
     public void onCommit(RaftContext context, StateMachine stateMachine, ServerState state) {
         if (!isCommitted()) {
-            deletedData = stateMachine.delete(path);
+            deletedData = stateMachine.delete(name);
         }
         super.onCommit(context, stateMachine, state);
     }

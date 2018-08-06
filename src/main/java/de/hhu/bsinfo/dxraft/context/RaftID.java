@@ -31,4 +31,8 @@ public class RaftID implements Serializable {
     public String toString() {
         return "" + id;
     }
+
+    public short getValue() {
+        return id;
+    }
 }
