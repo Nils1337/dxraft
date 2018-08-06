@@ -10,8 +10,10 @@ import de.hhu.bsinfo.dxraft.data.StringData;
 import de.hhu.bsinfo.dxraft.message.*;
 import de.hhu.bsinfo.dxraft.data.RaftData;
 import de.hhu.bsinfo.dxraft.message.client.AddServerRequest;
+import de.hhu.bsinfo.dxraft.message.client.AppendToListRequest;
 import de.hhu.bsinfo.dxraft.message.client.ClientRequest;
 import de.hhu.bsinfo.dxraft.message.client.DeleteListRequest;
+import de.hhu.bsinfo.dxraft.message.client.RemoveFromListRequest;
 import de.hhu.bsinfo.dxraft.message.client.WriteListRequest;
 import de.hhu.bsinfo.dxraft.message.client.DeleteRequest;
 import de.hhu.bsinfo.dxraft.message.client.ReadRequest;
@@ -67,15 +69,6 @@ public class RaftClient {
         return false;
     }
 
-    public boolean write(String name, RaftData value) {
-        ClientResponse response = sendRequest(new WriteRequest(name, value));
-        if (response != null) {
-            return response.isSuccess();
-        }
-
-        return false;
-    }
-
     public boolean write(String name, RaftData value, boolean overwrite) {
         ClientResponse response = sendRequest(new WriteRequest(name, value, overwrite));
         if (response != null) {
@@ -112,8 +105,8 @@ public class RaftClient {
         return false;
     }
 
-    public boolean writeList(String name, List<RaftData> value) {
-        ClientResponse response = sendRequest(new WriteListRequest(name, value));
+    public boolean writeList(String name, List<RaftData> value, boolean overwrite) {
+        ClientResponse response = sendRequest(new WriteListRequest(name, value, overwrite));
         if (response != null) {
             return response.isSuccess();
         }
@@ -121,8 +114,17 @@ public class RaftClient {
         return false;
     }
 
-    public boolean writeList(String name, List<RaftData> value, boolean overwrite) {
-        ClientResponse response = sendRequest(new WriteListRequest(name, value, overwrite));
+    public boolean addToList(String name, RaftData value, boolean createIfNotExistent) {
+        ClientResponse response = sendRequest(new AppendToListRequest(name, value, createIfNotExistent));
+        if (response != null) {
+            return response.isSuccess();
+        }
+
+        return false;
+    }
+
+    public boolean removeFromList(String name, RaftData value, boolean deleteIfEmpty) {
+        ClientResponse response = sendRequest(new RemoveFromListRequest(name, value, deleteIfEmpty));
         if (response != null) {
             return response.isSuccess();
         }
@@ -259,7 +261,7 @@ public class RaftClient {
             } else if (in.startsWith("write")) {
                 String[] strings = in.split(" ");
                 if (strings.length > 2) {
-                    boolean result = client.write(strings[1], new StringData(strings[2]));
+                    boolean result = client.write(strings[1], new StringData(strings[2]), true);
                     if (result) {
                         System.out.println("Write successful!");
                     } else {

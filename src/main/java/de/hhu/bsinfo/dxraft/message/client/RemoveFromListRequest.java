@@ -13,12 +13,14 @@ public class RemoveFromListRequest extends ClientRequest {
 
     private String name;
     private RaftData value;
+    private boolean deleteIfEmpty;
 
     private transient boolean success;
 
-    public RemoveFromListRequest(String name, RaftData value) {
+    public RemoveFromListRequest(String name, RaftData value, boolean deleteIfEmpty) {
         this.name = name;
         this.value = value;
+        this.deleteIfEmpty = deleteIfEmpty;
     }
 
     public String getPath() {
@@ -35,6 +37,9 @@ public class RemoveFromListRequest extends ClientRequest {
             List<RaftData> list = stateMachine.readList(name);
             if (list != null) {
                 success = list.remove(value);
+                if (success && list.isEmpty() && deleteIfEmpty) {
+                    stateMachine.deleteList(name);
+                }
             } else {
                 success = false;
             }

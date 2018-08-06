@@ -1,5 +1,6 @@
 package de.hhu.bsinfo.dxraft.message.client;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import de.hhu.bsinfo.dxraft.context.RaftAddress;
@@ -12,12 +13,14 @@ import de.hhu.bsinfo.dxraft.state.StateMachine;
 public class AppendToListRequest extends ClientRequest {
     private String name;
     private RaftData value;
+    private boolean createIfNotExistent;
 
     private transient boolean success;
 
-    public AppendToListRequest(String name, RaftData value) {
+    public AppendToListRequest(String name, RaftData value, boolean createIfNotExistent) {
         this.name = name;
         this.value = value;
+        this.createIfNotExistent = createIfNotExistent;
     }
 
     public String getPath() {
@@ -32,7 +35,13 @@ public class AppendToListRequest extends ClientRequest {
     public void onCommit(RaftContext context, StateMachine stateMachine, ServerState state) {
         if (!isCommitted()) {
             List<RaftData> list = stateMachine.readList(name);
-            if (list != null) {
+
+            if (list == null && createIfNotExistent) {
+                List<RaftData> newList = new ArrayList<>();
+                newList.add(value);
+                stateMachine.writeList(name, newList);
+                success = true;
+            } else if (list != null) {
                 list.add(value);
                 success = true;
             } else {
