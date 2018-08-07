@@ -201,7 +201,7 @@ class RaftServerSpec extends Specification {
 
         then:
 
-            1 * log.updateEntries(2, requestEntries)
+            1 * log.updateEntries(3, requestEntries)
 
             // commit index should be updated correctly
             1 * log.commitEntries(newCommitIndex) >> committedEntries
@@ -240,7 +240,7 @@ class RaftServerSpec extends Specification {
 
         then:
             // log should be updated correctly
-            1 * log.updateEntries(2, requestEntries)
+            1 * log.updateEntries(3, requestEntries)
 
             // commit index should not be updated
             0 * log.commitEntries(_)

@@ -12,11 +12,14 @@ class LogSpec extends Specification {
     def stateMachine = Mock(StateMachine)
     def context = Mock(RaftContext)
     def logStorage = Mock(LogStorage)
-    def log = new Log(context, stateMachine, logStorage)
+    def log = new Log(context)
 
     def logEntries = []
 
     def setup() {
+        log.setStateMachine(stateMachine)
+        log.setLogStorage(logStorage)
+
         logStorage.getSize() >> 3
 
         3.times {

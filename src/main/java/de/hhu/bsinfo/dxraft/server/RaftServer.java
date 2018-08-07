@@ -148,10 +148,8 @@ public class RaftServer implements ServerMessageReceiver, TimeoutHandler {
     @Override
     public synchronized void processAppendEntriesRequest(AppendEntriesRequest request) {
         checkTerm(request.getTerm(), request.getSenderId());
-        if (state.getCurrentTerm() <= request.getTerm()) {
-            if (state.isFollower()) {
-                state.resetStateAsFollower();
-            }
+        if (state.getCurrentTerm() <= request.getTerm() && state.isFollower() && !state.isIdle()) {
+            state.resetStateAsFollower();
         }
 
         // if server is candidate and receives an append entries request with its current term

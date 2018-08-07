@@ -54,6 +54,7 @@ class ServerStateSpec extends Specification {
         then:
             1 * timer.reset(ServerState.State.LEADER)
             context.getServersIds() >> servers
+            log.getUncommittedEntries() >> []
 
             state.isLeader()
             state.getCurrentTerm() == 2

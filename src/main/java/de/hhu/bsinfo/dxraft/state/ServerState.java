@@ -81,7 +81,7 @@ public class ServerState {
 
     public void updateVote(RaftID id, boolean voteGranted) {
         if (state != State.CANDIDATE) {
-            throw new IllegalStateException("Server could not update vote map because state is " + state.toString() + " but should be CANDIDATE!");
+            throw new IllegalStateException("Server could not update vote map because state is " + state + " but should be CANDIDATE!");
         }
         votesMap.put(id, voteGranted);
     }
@@ -138,14 +138,14 @@ public class ServerState {
 
     public void decrementNextIndex(RaftID id) {
         if (state != State.LEADER) {
-            throw new IllegalStateException("Server could not update next index because state is " + state.toString() + " but should be LEADER!");
+            throw new IllegalStateException("Server could not update next index because state is " + state + " but should be LEADER!");
         }
         nextIndexMap.computeIfPresent(id, (k, v) -> v > 0 ? v - 1 : v);
     }
 
     public void updateNextIndex(RaftID id, int index) {
         if (state != State.LEADER) {
-            throw new IllegalStateException("Server could not update next index because state is " + state.toString() + " but should be LEADER!");
+            throw new IllegalStateException("Server could not update next index because state is " + state + " but should be LEADER!");
         }
         nextIndexMap.put(id, index);
     }
@@ -166,7 +166,7 @@ public class ServerState {
 
     public void updateMatchIndex(RaftID id, int index) {
         if (state != State.LEADER) {
-            throw new IllegalStateException("Server could not update match index because state is " + state.toString() + " but should be LEADER!");
+            throw new IllegalStateException("Server could not update match index because state is " + state + " but should be LEADER!");
         }
         matchIndexMap.put(id, index);
     }
@@ -220,7 +220,7 @@ public class ServerState {
 
     public void updateLeader(RaftID leaderId) {
         if (state != State.FOLLOWER) {
-            throw new IllegalStateException("Server could not set leader because state is " + state.toString() + " but should be FOLLOWER!");
+            throw new IllegalStateException("Server could not set leader because state is " + state + " but should be FOLLOWER!");
         }
         this.currentLeader = leaderId;
     }
@@ -231,7 +231,7 @@ public class ServerState {
 
     public void updateVote(RaftID votedFor) {
         if (state != State.FOLLOWER) {
-            throw new IllegalStateException("Server could not set vote because state is " + state.toString() + " but should be FOLLOWER!");
+            throw new IllegalStateException("Server could not set vote because state is " + state + " but should be FOLLOWER!");
         }
         this.votedFor = votedFor;
 
@@ -250,7 +250,7 @@ public class ServerState {
      */
     public void convertStateToLeader() {
         if (state != State.CANDIDATE) {
-            throw new IllegalStateException("Server could not convert to leader because state is " + state.toString() + " but should be CANDIDATE!");
+            throw new IllegalStateException("Server could not convert to leader because state is " + state + " but should be CANDIDATE!");
         }
 
         LOGGER.info("Server is now leader in term {}",  currentTerm);
@@ -266,7 +266,7 @@ public class ServerState {
 
     public void resetStateAsLeader() {
         if (state != State.LEADER) {
-            throw new IllegalStateException("Server could not be reset because state is " + state.toString() + " but should be LEADER!");
+            throw new IllegalStateException("Server could not be reset because state is " + state + " but should be LEADER!");
         }
 
         timer.reset(state);
@@ -277,7 +277,7 @@ public class ServerState {
      */
     public void convertStateToFollower() {
         if (state == State.FOLLOWER) {
-            throw new IllegalStateException("Server could not convert to follower because state is " + state.toString() + " but should be CANDIDATE or LEADER!");
+            throw new IllegalStateException("Server could not convert to follower because state is " + state + " but should be CANDIDATE or LEADER!");
         }
 
         state = State.FOLLOWER;
@@ -287,12 +287,10 @@ public class ServerState {
 
     public void resetStateAsFollower() {
         if (state != State.FOLLOWER) {
-            throw new IllegalStateException("Server could not be reset because state is " + state.toString() + " but should be FOLLOWER!");
-        }
-        if (!idle) {
-            timer.reset(state);
+            throw new IllegalStateException("Server could not be reset because state is " + state + " but should be FOLLOWER!");
         }
 
+        timer.reset(state);
     }
 
     /**
@@ -300,7 +298,7 @@ public class ServerState {
      */
     public void convertStateToCandidate() {
         if (state != State.FOLLOWER) {
-            throw new IllegalStateException("Server could not convert to candidate because state is " + state.toString() + " but should be FOLLOWER!");
+            throw new IllegalStateException("Server could not convert to candidate because state is " + state + " but should be FOLLOWER!");
         }
 
         LOGGER.info("Starting election...");
@@ -310,7 +308,7 @@ public class ServerState {
 
     public void resetStateAsCandidate() {
         if (state != State.CANDIDATE) {
-            throw new IllegalStateException("Server could not be reset because state is " + state.toString() + " but should be CANDIDATE!");
+            throw new IllegalStateException("Server could not be reset because state is " + state + " but should be CANDIDATE!");
         }
 
         currentTerm++;
@@ -335,6 +333,10 @@ public class ServerState {
         timer.reset(state);
 
         LOGGER.info("Server is now active");
+    }
+
+    public boolean isIdle() {
+        return idle;
     }
 
     /**
