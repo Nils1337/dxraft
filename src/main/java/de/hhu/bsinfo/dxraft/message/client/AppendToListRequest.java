@@ -23,7 +23,7 @@ public class AppendToListRequest extends ClientRequest {
         this.createIfNotExistent = createIfNotExistent;
     }
 
-    public String getPath() {
+    public String getName() {
         return name;
     }
 

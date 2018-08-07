@@ -28,7 +28,7 @@ public class WriteListRequest extends ClientRequest {
         this.overwrite = overwrite;
     }
 
-    public String getPath() {
+    public String getName() {
         return name;
     }
 

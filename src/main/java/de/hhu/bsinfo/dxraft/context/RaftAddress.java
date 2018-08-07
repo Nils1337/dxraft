@@ -21,7 +21,6 @@ public class RaftAddress implements Serializable {
 
     public RaftAddress(String ip) {
         this.ip = ip;
-        this.port = port;
     }
 
     public RaftID getId() {

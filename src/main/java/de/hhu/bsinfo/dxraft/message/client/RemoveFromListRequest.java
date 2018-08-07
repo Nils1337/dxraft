@@ -23,7 +23,7 @@ public class RemoveFromListRequest extends ClientRequest {
         this.deleteIfEmpty = deleteIfEmpty;
     }
 
-    public String getPath() {
+    public String getName() {
         return name;
     }
 

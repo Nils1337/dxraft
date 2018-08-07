@@ -13,6 +13,7 @@ import de.hhu.bsinfo.dxraft.message.client.AddServerRequest;
 import de.hhu.bsinfo.dxraft.message.client.AppendToListRequest;
 import de.hhu.bsinfo.dxraft.message.client.ClientRequest;
 import de.hhu.bsinfo.dxraft.message.client.DeleteListRequest;
+import de.hhu.bsinfo.dxraft.message.client.ReadListRequest;
 import de.hhu.bsinfo.dxraft.message.client.RemoveFromListRequest;
 import de.hhu.bsinfo.dxraft.message.client.WriteListRequest;
 import de.hhu.bsinfo.dxraft.message.client.DeleteRequest;
@@ -109,7 +110,7 @@ public class RaftClient {
     }
 
     public List<RaftData> readList(String name) {
-        ClientResponse response = sendRequest(new ReadRequest(name));
+        ClientResponse response = sendRequest(new ReadListRequest(name));
         if (response != null) {
             return response.getListValue();
         }
@@ -118,9 +119,9 @@ public class RaftClient {
     }
 
     public boolean listExists(String name) {
-        ClientResponse response = sendRequest(new ReadRequest(name));
+        ClientResponse response = sendRequest(new ReadListRequest(name));
         if (response != null) {
-            return response.getValue() != null;
+            return response.getListValue() != null;
         }
 
         return false;
@@ -153,13 +154,13 @@ public class RaftClient {
         return false;
     }
 
-    public boolean deleteList(String name) {
+    public List<RaftData> deleteList(String name) {
         ClientResponse response = sendRequest(new DeleteListRequest(name));
         if (response != null) {
-            return response.isSuccess();
+            return response.getListValue();
         }
 
-        return false;
+        return null;
     }
 
     public boolean addServer(RaftAddress server) {
@@ -231,6 +232,13 @@ public class RaftClient {
                 if (redirection.getLeaderAddress() != null) {
                     serverAddress = redirection.getLeaderAddress();
                 } else {
+                    // cluster might be trying to elect leader
+                    // wait a short time
+                    try {
+                        Thread.sleep(retryTimeout);
+                    } catch (InterruptedException e) {
+                        LOGGER.error(e);
+                    }
                     serverAddress = getRandomServer();
                 }
             }

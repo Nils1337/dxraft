@@ -17,7 +17,7 @@ public class DeleteListRequest extends ClientRequest{
         this.name = name;
     }
 
-    public String getPath() {
+    public String getName() {
         return name;
     }
 

@@ -18,7 +18,7 @@ public class ReadRequest extends ClientRequest {
         this.name = name;
     }
 
-    public String getPath() {
+    public String getName() {
         return name;
     }
 

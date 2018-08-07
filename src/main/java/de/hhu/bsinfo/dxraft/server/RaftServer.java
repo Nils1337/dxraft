@@ -258,7 +258,7 @@ public class RaftServer implements ServerMessageReceiver, TimeoutHandler {
     }
 
 
-    // TODO correctly implement read requests (prevent stale reads)
+    // TODO bypass raft algorithm for read requests but make sure reads cannot be stale
     // TODO improve performance of configuration changes by catching up new servers before propagating the change to followers
     @Override
     public synchronized void processClientRequest(ClientRequest request) {
@@ -266,54 +266,55 @@ public class RaftServer implements ServerMessageReceiver, TimeoutHandler {
         // serve request if server is leader
         if (state.isLeader()) {
 
-            if (request.isReadRequest()) {
+/*            if (request.isReadRequest()) {
                 LOGGER.debug("Received read request from client {}", request.getSenderAddress());
 
                 ReadRequest readRequest = (ReadRequest) request;
                 readRequest.onCommit(context, log.getStateMachine(), state);
                 ClientResponse response = readRequest.buildResponse();
                 networkService.sendMessage(response);
-            } else {
-                // check if request was already handled before
-                if (log.contains(request)) {
+            } else {*/
 
-                    LogEntry currentLogEntry = log.getEntryByIndex(log.indexOf(request));
-                    currentLogEntry.updateClientRequest(request);
+            // check if request was already handled before
+            if (log.contains(request)) {
 
-                    // check if logEntry is already committed
-                    if (currentLogEntry.isCommitted()) {
-                        // if request is committed, get the response and send it
-                        ClientResponse clientResponse = currentLogEntry.buildResponse();
+                LogEntry currentLogEntry = log.getEntryByIndex(log.indexOf(request));
+                currentLogEntry.updateClientRequest(request);
 
-                        if (clientResponse == null) {
-                            // this should not happen
-                            LOGGER.error("Received request from client {} with already existent id but response could not be built", request.getSenderAddress());
-                        } else {
-                            networkService.sendMessage(clientResponse);
-                        }
-                    }
-                } else {
+                // check if logEntry is already committed
+                if (currentLogEntry.isCommitted()) {
+                    // if request is committed, get the response and send it
+                    ClientResponse clientResponse = currentLogEntry.buildResponse();
 
-                    if (request.isConfigChangeRequest()) {
-                        state.addPendingConfigChangeRequest(request);
-                        if (state.configChangeRequestisPending()) {
-                            LOGGER.debug("Configuration change already in progress -> adding request to pending configuration change requests");
-                            return;
-                        }
-                    }
-
-                    // set the term of the new log entry
-                    request.setTerm(state.getCurrentTerm());
-
-                    log.append(request);
-
-                    LOGGER.debug("Received write request from client {} -> Sending append entries requests to followers", request.getSenderAddress());
-                    // update logs of all servers
-                    for (RaftID server : context.getOtherServerIds()) {
-                        sendAppendEntriesRequest(server);
+                    if (clientResponse == null) {
+                        // this should not happen
+                        LOGGER.error("Received request from client {} with already existent id but response could not be built", request.getSenderAddress());
+                    } else {
+                        networkService.sendMessage(clientResponse);
                     }
                 }
+            } else {
+
+                if (request.isConfigChangeRequest()) {
+                    state.addPendingConfigChangeRequest(request);
+                    if (state.configChangeRequestisPending()) {
+                        LOGGER.debug("Configuration change already in progress -> adding request to pending configuration change requests");
+                        return;
+                    }
+                }
+
+                // set the term of the new log entry
+                request.setTerm(state.getCurrentTerm());
+
+                log.append(request);
+
+                LOGGER.debug("Received request from client {} -> Sending append entries requests to followers", request.getSenderAddress());
+                // update logs of all servers
+                for (RaftID server : context.getOtherServerIds()) {
+                    sendAppendEntriesRequest(server);
+                }
             }
+//            }
 
         // else redirect client to current leader
         } else {

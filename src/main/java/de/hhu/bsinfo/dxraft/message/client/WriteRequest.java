@@ -26,7 +26,7 @@ public class WriteRequest extends ClientRequest {
         this.value = value;
     }
 
-    public String getPath() {
+    public String getName() {
         return name;
     }
 
