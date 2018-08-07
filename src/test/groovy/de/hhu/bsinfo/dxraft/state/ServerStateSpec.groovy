@@ -13,7 +13,7 @@ class ServerStateSpec extends Specification {
     def timer = Mock(RaftTimer)
     def log = Mock(Log)
     def context = Mock(RaftServerContext)
-    def state = new ServerState(context, timer, log)
+    def state = new ServerState(context)
     def id1 = new RaftID(1)
     def id2 = new RaftID(2)
     def id3 = new RaftID(3)
@@ -21,6 +21,8 @@ class ServerStateSpec extends Specification {
 
     def setup() {
         context.getOtherServerIds() >> servers
+        state.setTimer(timer)
+        state.setLog(log)
     }
 
     def "test state changes"() {
@@ -112,6 +114,7 @@ class ServerStateSpec extends Specification {
             state.getNewCommitIndex() == newCommitIndex
         where:
             index1 | index2 | currentTerm || newCommitIndex
+            0 | 0 | 0 || 0
             1 | 2 | 1 || 1
             3 | 3 | 1 || 1
             3 | 3 | 3 || 3

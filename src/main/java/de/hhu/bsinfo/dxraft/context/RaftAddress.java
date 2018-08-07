@@ -6,7 +6,7 @@ import java.util.Objects;
 public class RaftAddress implements Serializable {
     private RaftID id;
     private String ip;
-    private int port;
+    private int port = -1;
 
     public RaftAddress(RaftID id, String ip, int port) {
         this.id = id;
@@ -15,6 +15,11 @@ public class RaftAddress implements Serializable {
     }
 
     public RaftAddress(String ip, int port) {
+        this.ip = ip;
+        this.port = port;
+    }
+
+    public RaftAddress(String ip) {
         this.ip = ip;
         this.port = port;
     }
@@ -29,6 +34,10 @@ public class RaftAddress implements Serializable {
 
     public int getPort() {
         return port;
+    }
+
+    public void setPort(int port) {
+        this.port = port;
     }
 
     @Override

@@ -74,7 +74,7 @@ public class Log {
     }
 
     public List<LogEntry> getNewestEntries(int fromIndex) {
-        return logStorage.getEntriesByRange(fromIndex, logStorage.getSize() - 1);
+        return logStorage.getEntriesByRange(fromIndex, logStorage.getSize());
     }
 
     public int getCommitIndex() {
@@ -93,7 +93,7 @@ public class Log {
     }
 
     public List<LogEntry> commitEntries(int newCommitIndex) {
-        if (newCommitIndex < this.commitIndex) {
+        if (newCommitIndex < commitIndex) {
             throw new IllegalArgumentException("The commit index must never be decreased!");
         }
 
@@ -101,8 +101,8 @@ public class Log {
             throw new IllegalArgumentException("Cannot commit entries that do not exist");
         }
 
-        int oldCommitIndex = this.commitIndex;
-        this.commitIndex = newCommitIndex;
+        int oldCommitIndex = commitIndex;
+        commitIndex = newCommitIndex;
 
         // return committed entries
         List<LogEntry> committedEntries = logStorage.getEntriesByRange(oldCommitIndex + 1, newCommitIndex + 1);
@@ -114,13 +114,13 @@ public class Log {
 
 
     /**
-     * Updates the log from prevLogIndex with the log entries in newEntries
+     * Updates the log from fromIndex with the log entries in entries
      * @param fromIndex
      * @param entries
      * @return Removed log entries
      */
     public void updateEntries(int fromIndex, List<LogEntry> entries) {
-        if (fromIndex <= getCommitIndex()) {
+        if (fromIndex <= commitIndex) {
             throw new IllegalArgumentException("Cannot update already committed entries!");
         }
 

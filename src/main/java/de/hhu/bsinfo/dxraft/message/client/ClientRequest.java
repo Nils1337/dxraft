@@ -28,7 +28,6 @@ public abstract class ClientRequest extends RaftMessage implements MessageDelive
         return id;
     }
 
-
     public boolean isReadRequest() {
         return this instanceof ReadRequest;
     }
@@ -48,6 +47,10 @@ public abstract class ClientRequest extends RaftMessage implements MessageDelive
     @Override
     public int getTerm() {
         return term;
+    }
+
+    public void setTerm(int term) {
+        this.term = term;
     }
 
     @Override

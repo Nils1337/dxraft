@@ -16,9 +16,6 @@ public class RaftContext {
     private RaftAddress localAddress;
 
     public RaftContext(List<RaftAddress> raftServers, RaftAddress localAddress) {
-        if (localAddress == null) {
-            throw new IllegalArgumentException("Local Address must not be null!");
-        }
         this.localAddress = localAddress;
         this.raftServers = raftServers;
     }
@@ -32,11 +29,11 @@ public class RaftContext {
     }
 
     public Set<RaftID> getOtherServerIds() {
-        return getRaftServers().stream().filter(address -> !address.equals(getLocalAddress())).map(RaftAddress::getId).collect(Collectors.toSet());
+        return raftServers.stream().filter(address -> !address.equals(localAddress)).map(RaftAddress::getId).collect(Collectors.toSet());
     }
 
     public Set<RaftAddress> getOtherRaftServers() {
-        return getRaftServers().stream().filter(address -> !address.equals(getLocalAddress())).collect(Collectors.toSet());
+        return raftServers.stream().filter(address -> !address.equals(localAddress)).collect(Collectors.toSet());
     }
 
     public RaftID getLocalId() {

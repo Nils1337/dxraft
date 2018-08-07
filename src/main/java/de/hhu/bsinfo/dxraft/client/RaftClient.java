@@ -48,7 +48,7 @@ public class RaftClient {
 
     public RaftClient(RaftContext context) {
         this.context = context;
-        this.networkService = new DatagramNetworkService(context);
+        networkService = new DatagramNetworkService(context, true);
     }
 
     public RaftData read(String path) {
@@ -58,6 +58,18 @@ public class RaftClient {
         }
 
         return null;
+    }
+
+    public short readShort(String path) {
+        ClientResponse response = sendRequest(new ReadRequest(path));
+        if (response != null) {
+            try {
+                return Short.parseShort(((StringData) response.getValue()).getData());
+            } catch (NumberFormatException | ClassCastException e) {
+                return -1;
+            }
+        }
+        return -1;
     }
 
     public boolean exists(String name) {
@@ -71,6 +83,15 @@ public class RaftClient {
 
     public boolean write(String name, RaftData value, boolean overwrite) {
         ClientResponse response = sendRequest(new WriteRequest(name, value, overwrite));
+        if (response != null) {
+            return response.isSuccess();
+        }
+
+        return false;
+    }
+
+    public boolean write(String name, short value, boolean overwrite) {
+        ClientResponse response = sendRequest(new WriteRequest(name, new StringData(String.valueOf(value)), overwrite));
         if (response != null) {
             return response.isSuccess();
         }
@@ -169,7 +190,7 @@ public class RaftClient {
     }
 
     public List<RaftAddress> getCurrentConfig() {
-        ClientResponse response = sendRequest(new ReadRequest(SpecialPaths.LEADER_PATH));
+        ClientResponse response = sendRequest(new ReadRequest(SpecialPaths.CLUSTER_CONFIG_PATH));
         if (response != null && response.getValue() instanceof ClusterConfigData) {
             return ((ClusterConfigData) response.getValue()).getServers();
         }
@@ -227,8 +248,8 @@ public class RaftClient {
     }
 
     public static void main(String[] args) {
-        short id = 3;
 
+        //for logging
         System.setProperty("serverId", "client");
 
         List<RaftAddress> servers = new ArrayList<>();
@@ -236,8 +257,7 @@ public class RaftClient {
             servers.add(new RaftAddress(new RaftID((short) i), "127.0.0.1", 5000 + i));
         }
 
-        RaftAddress localAddress = new RaftAddress(new RaftID(id), "127.0.0.1", 6000);
-        RaftContext context = new RaftContext(servers, localAddress);
+        RaftContext context = new RaftContext(servers, new RaftAddress("127.0.0.1"));
 
         RaftClient client = new RaftClient(context);
 
@@ -281,6 +301,20 @@ public class RaftClient {
                     }
                 } else {
                     System.out.println("invalid operation!");
+                }
+            } else if (in.startsWith("leader")) {
+                RaftAddress result = client.getCurrentLeader();
+                if (result != null) {
+                    System.out.println("Current leader is: " + result);
+                } else {
+                    System.out.println("Could not determine current leader!");
+                }
+            } else if (in.startsWith("config")) {
+                List<RaftAddress> result = client.getCurrentConfig();
+                if (result != null) {
+                    System.out.println("Current configuration is: " + result);
+                } else {
+                    System.out.println("Could not determine current configuration!");
                 }
             } else {
                 System.out.println("invalid operation!");

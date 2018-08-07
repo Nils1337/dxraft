@@ -17,30 +17,90 @@ public class DatagramNetworkService extends AbstractNetworkService {
 
     private static final int MAX_MESSAGE_SIZE = 65535;
     private RaftContext context;
-    private DatagramSocket socket;
+    private DatagramSocket serverSocket;
+    private DatagramSocket clientSocket;
     private Thread receiverThread;
 
-    public DatagramNetworkService(RaftContext context) {
+    public DatagramNetworkService(RaftContext context, boolean clientOnly) {
         this.context = context;
 
         try  {
-            socket = new DatagramSocket(new InetSocketAddress(context.getLocalAddress().getIp(), context.getLocalAddress().getPort()));
-
+            if (!clientOnly) {
+                serverSocket = new DatagramSocket(
+                    new InetSocketAddress(context.getLocalAddress().getIp(), context.getLocalAddress().getPort()));
+            }
+            clientSocket = new DatagramSocket();
         } catch (IOException e) {
             e.printStackTrace();
         }
-
     }
 
     @Override
     public RaftMessage sendRequest(ClientRequest request) {
-        sendMessage(request);
-        return receiveMessageWithTimeout();
+        DatagramPacket packet = preparePacket(request);
+        if (packet != null) {
+            try {
+                clientSocket.send(packet);
+                return receiveMessageClient();
+            } catch (IOException e) {
+                LOGGER.error("Error sending message", e);
+            }
+        }
+        return null;
     }
 
     @Override
     public void sendMessage(RaftMessage message) {
-        message.setSenderAddress(context.getLocalAddress());
+        DatagramPacket packet = preparePacket(message);
+        if (packet != null) {
+            try {
+                serverSocket.send(packet);
+            } catch (IOException e) {
+                LOGGER.error("Exception sending message", e);
+            }
+        }
+    }
+
+    @Override
+    public void sendMessageToAllServers(RaftMessage message) {
+        for (RaftID id : context.getOtherServerIds()) {
+            message.setReceiverId(id);
+            sendMessage(message);
+        }
+    }
+
+    @Override
+    public void startReceiving() {
+
+        receiverThread = new Thread(() -> {
+            while (true) {
+                RaftMessage message = receiveMessageServer();
+                if (message instanceof MessageDeliverer) {
+                    ((MessageDeliverer) message).deliverMessage(getMessageReceiver());
+                }
+            }
+        });
+
+        receiverThread.start();
+
+    }
+
+    @Override
+    public void stopReceiving() {
+        receiverThread.interrupt();
+    }
+
+    private DatagramPacket preparePacket(RaftMessage message) {
+
+        RaftAddress address = context.getLocalAddress();
+
+        // server messages should have the port set, client messages not
+        // set the port to the randomly chosen one of the client socket
+        if (address.getPort() == -1) {
+            address.setPort(clientSocket.getLocalPort());
+        }
+
+        message.setSenderAddress(address);
 
         try (
             ByteArrayOutputStream out = new ByteArrayOutputStream();
@@ -59,52 +119,24 @@ public class DatagramNetworkService extends AbstractNetworkService {
 
             if (receiverAddress == null) {
                 LOGGER.error("Receiver of message " + message + " could not be determined");
-                return;
+                return null;
             }
 
             SocketAddress socketAddress = new InetSocketAddress(receiverAddress.getIp(), receiverAddress.getPort());
+            return new DatagramPacket(msg, msg.length, socketAddress);
 
-            socket.send(new DatagramPacket(msg, msg.length, socketAddress));
         } catch (IOException e) {
-            e.printStackTrace();
+            LOGGER.error("Exception preparing message", e);
         }
+
+        return null;
     }
-
-    @Override
-    public void sendMessageToAllServers(RaftMessage message) {
-        for (RaftID id : context.getOtherServerIds()) {
-            message.setReceiverId(id);
-            sendMessage(message);
-        }
-    }
-
-    @Override
-    public void startReceiving() {
-
-        receiverThread = new Thread(() -> {
-            while (true) {
-                RaftMessage message = receiveMessage();
-                if (message instanceof MessageDeliverer) {
-                    ((MessageDeliverer) message).deliverMessage(getMessageReceiver());
-                }
-            }
-        });
-
-        receiverThread.start();
-
-    }
-
-    @Override
-    public void stopReceiving() {
-        receiverThread.interrupt();
-    }
-
-    private RaftMessage receiveMessageWithTimeout() {
+    private RaftMessage receiveMessageClient() {
         try {
             byte[] buf = new byte[MAX_MESSAGE_SIZE];
             DatagramPacket msg = new DatagramPacket(buf, buf.length);
-            socket.setSoTimeout(1000);
-            socket.receive(msg);
+            clientSocket.setSoTimeout(1000);
+            clientSocket.receive(msg);
             ObjectInputStream objIn = new ObjectInputStream(new ByteArrayInputStream(msg.getData()));
             return (RaftMessage) objIn.readObject();
         } catch (IOException | ClassNotFoundException e) {
@@ -113,12 +145,12 @@ public class DatagramNetworkService extends AbstractNetworkService {
         return null;
     }
 
-    private RaftMessage receiveMessage() {
+    private RaftMessage receiveMessageServer() {
         try {
             byte[] buf = new byte[MAX_MESSAGE_SIZE];
             DatagramPacket msg = new DatagramPacket(buf, buf.length);
-            socket.setSoTimeout(0);
-            socket.receive(msg);
+            serverSocket.setSoTimeout(0);
+            serverSocket.receive(msg);
             ObjectInputStream objIn = new ObjectInputStream(new ByteArrayInputStream(msg.getData()));
             return (RaftMessage) objIn.readObject();
         } catch (IOException | ClassNotFoundException e) {
