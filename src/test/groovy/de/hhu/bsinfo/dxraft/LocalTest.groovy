@@ -35,7 +35,7 @@ class LocalTest extends Specification {
             def context = RaftServerContext.RaftServerContextBuilder
                 .aRaftServerContext()
                 .withLocalAddress(localAddress)
-                .withRaftServers(serverAddresses.clone())
+                .withRaftServers(serverAddresses)
                 .build()
 
             def server = RaftServer.RaftServerBuilder
@@ -56,7 +56,7 @@ class LocalTest extends Specification {
         def context = RaftServerContext.RaftServerContextBuilder
             .aRaftServerContext()
             .withLocalAddress(localAddress)
-            .withRaftServers(serverAddresses.clone())
+            .withRaftServers(serverAddresses)
             .build()
 
         client = new RaftClient(context)
@@ -121,7 +121,7 @@ class LocalTest extends Specification {
         def context = RaftServerContext.RaftServerContextBuilder
             .aRaftServerContext()
             .withLocalAddress(newAddress)
-            .withRaftServers(serverAddresses.clone())
+            .withRaftServers(serverAddresses)
             .build()
 
         def newServer = RaftServer.RaftServerBuilder
@@ -167,7 +167,7 @@ class LocalTest extends Specification {
         def context = RaftServerContext.RaftServerContextBuilder
             .aRaftServerContext()
             .withLocalAddress(localAddress)
-            .withRaftServers(serverAddresses.clone())
+            .withRaftServers(serverAddresses)
             .build()
 
         def client2 = new RaftClient(context)

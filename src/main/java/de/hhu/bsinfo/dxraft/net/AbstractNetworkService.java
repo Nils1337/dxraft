@@ -14,8 +14,6 @@ public abstract class AbstractNetworkService {
 
     public abstract void sendMessage(RaftMessage message);
 
-    public abstract void sendMessageToAllServers(RaftMessage message);
-
     public abstract RaftMessage sendRequest(ClientRequest request);
 
     public abstract void startReceiving();

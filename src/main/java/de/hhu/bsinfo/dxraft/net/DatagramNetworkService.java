@@ -85,14 +85,6 @@ public class DatagramNetworkService extends AbstractNetworkService {
     }
 
     @Override
-    public void sendMessageToAllServers(RaftMessage message) {
-        for (RaftID id : context.getOtherServerIds()) {
-            message.setReceiverId(id);
-            sendMessage(message);
-        }
-    }
-
-    @Override
     public void startReceiving() {
 
         receiverThread = new Thread(() -> {

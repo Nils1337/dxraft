@@ -120,6 +120,10 @@ public class Log {
      * @return Removed log entries
      */
     public void updateEntries(int fromIndex, List<LogEntry> entries) {
+        if (fromIndex < 0) {
+            throw new IllegalArgumentException("fromIndex must not be smaller than zero");
+        }
+
         for (int i = 0; i < entries.size(); i++) {
             int currentIndex = fromIndex + i;
             if (currentIndex >= logStorage.getSize()) {

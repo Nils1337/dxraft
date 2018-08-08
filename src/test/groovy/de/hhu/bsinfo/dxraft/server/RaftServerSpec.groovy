@@ -126,6 +126,9 @@ class RaftServerSpec extends Specification {
             state.isCandidate() >> true
             voteResponse.isVoteGranted() >> true
             context.getServerCount() >> 3
+            context.getOtherServerIds() >> (1..2).collect {
+                Mock(RaftID)
+            }
 
         when:
             server.processVoteResponse(voteResponse)
@@ -146,7 +149,7 @@ class RaftServerSpec extends Specification {
 
             1 * state.updateVote(id2, true)
             1 * state.convertStateToLeader()
-            1 * netService.sendMessageToAllServers({msg -> msg instanceof AppendEntriesRequest})
+            2 * netService.sendMessage({msg -> msg instanceof AppendEntriesRequest})
     }
 
     def "test success of append entries request handler"() {

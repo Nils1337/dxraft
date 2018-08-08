@@ -3,6 +3,7 @@ package de.hhu.bsinfo.dxraft.context;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -17,7 +18,7 @@ public class RaftContext {
 
     public RaftContext(List<RaftAddress> raftServers, RaftAddress localAddress) {
         this.localAddress = localAddress;
-        this.raftServers = raftServers;
+        this.raftServers = new ArrayList<>(raftServers);
     }
 
     public Set<RaftID> getServersIds() {

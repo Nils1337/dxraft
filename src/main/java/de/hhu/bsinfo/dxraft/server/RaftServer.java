@@ -5,6 +5,7 @@ import de.hhu.bsinfo.dxraft.context.RaftAddress;
 import de.hhu.bsinfo.dxraft.context.RaftContext;
 import de.hhu.bsinfo.dxraft.context.RaftID;
 import de.hhu.bsinfo.dxraft.log.*;
+import de.hhu.bsinfo.dxraft.message.RaftMessage;
 import de.hhu.bsinfo.dxraft.message.client.AddServerRequest;
 import de.hhu.bsinfo.dxraft.message.client.ClientRequest;
 import de.hhu.bsinfo.dxraft.message.client.ReadRequest;
@@ -359,7 +360,7 @@ public class RaftServer implements ServerMessageReceiver, TimeoutHandler {
      */
     private void sendHeartbeat() {
         AppendEntriesRequest request = new AppendEntriesRequest(null, state.getCurrentTerm(), log.getLastIndex(), log.isEmpty() ? -1 : log.getLastTerm(), log.getCommitIndex(), null);
-        networkService.sendMessageToAllServers(request);
+        sendMessageToAllServers(request);
     }
 
     private void sendAppendEntriesRequest(RaftID followerId) {
@@ -379,7 +380,14 @@ public class RaftServer implements ServerMessageReceiver, TimeoutHandler {
      */
     private void sendVoteRequests() {
         VoteRequest voteRequest = new VoteRequest(null, state.getCurrentTerm(), log.getLastIndex(), log.getLastIndex() >= 0 ? log.getLastEntry().getTerm() : -1);
-        networkService.sendMessageToAllServers(voteRequest);
+        sendMessageToAllServers(voteRequest);
+    }
+
+    private void sendMessageToAllServers(RaftMessage message) {
+        for (RaftID id : context.getOtherServerIds()) {
+            message.setReceiverId(id);
+            networkService.sendMessage(message);
+        }
     }
 
     private void checkTerm(int term) {
