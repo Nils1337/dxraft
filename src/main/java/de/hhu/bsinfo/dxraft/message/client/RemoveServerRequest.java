@@ -55,5 +55,6 @@ public class RemoveServerRequest extends ClientRequest {
             // if the removed server is the server itself, it should now stop taking part in the cluster
             state.becomeIdle();
         }
+        super.onCommit(context, stateMachine, state);
     }
 }

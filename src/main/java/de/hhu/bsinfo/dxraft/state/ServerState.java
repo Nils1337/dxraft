@@ -222,7 +222,7 @@ public class ServerState {
         if (state != State.FOLLOWER) {
             throw new IllegalStateException("Server could not set leader because state is " + state + " but should be FOLLOWER!");
         }
-        this.currentLeader = leaderId;
+        currentLeader = leaderId;
     }
 
     public RaftID getCurrentLeader() {

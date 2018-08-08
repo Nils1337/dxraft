@@ -34,7 +34,7 @@ class LocalTest extends Specification {
             def context = RaftServerContext.RaftServerContextBuilder
                 .aRaftServerContext()
                 .withLocalAddress(localAddress)
-                .withRaftServers(serverAddresses)
+                .withRaftServers(serverAddresses.clone())
                 .build()
 
             def server = RaftServer.RaftServerBuilder
@@ -55,7 +55,7 @@ class LocalTest extends Specification {
         def context = RaftServerContext.RaftServerContextBuilder
             .aRaftServerContext()
             .withLocalAddress(localAddress)
-            .withRaftServers(serverAddresses)
+            .withRaftServers(serverAddresses.clone())
             .build()
 
         client = new RaftClient(context)
@@ -108,6 +108,54 @@ class LocalTest extends Specification {
 
         where:
         i << (1..10)
+
+    }
+
+    @Unroll
+    def "test config changes"() {
+        setup:
+
+        def newAddress = new RaftAddress(new RaftID(3), "127.0.0.1", portFrom + 3)
+
+        def context = RaftServerContext.RaftServerContextBuilder
+            .aRaftServerContext()
+            .withLocalAddress(newAddress)
+            .withRaftServers(serverAddresses.clone())
+            .build()
+
+        def newServer = RaftServer.RaftServerBuilder
+            .aRaftServer()
+            .withContext(context)
+            .build()
+
+        newServer.joinExistingCluster()
+
+        expect:
+
+        client.getCurrentConfig() == serverAddresses
+        client.write("test", data, true)
+
+        client.addServer(newAddress)
+        client.getCurrentConfig() == serverAddresses + [newAddress]
+
+        client.read("test") == data
+
+        servers[1].shutdown()
+
+        client.read("test") == data
+
+        client.removeServer(serverAddresses[1])
+
+        client.getCurrentLeader() in serverAddresses[0,2] + [newAddress]
+        client.getCurrentConfig() == serverAddresses[0,2] + [newAddress]
+        client.read("test") == data
+
+        cleanup:
+        newServer.shutdown()
+
+        where:
+        i << (1..10)
+
 
     }
 

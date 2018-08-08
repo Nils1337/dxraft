@@ -49,7 +49,7 @@ public class AddServerRequest extends ClientRequest {
     @Override
     public void onRemove(RaftContext context, StateMachine stateMachine) {
         if (serverAdded) {
-            context.addServer(newServer);
+            context.removeServer(newServer);
             serverAdded = false;
         }
     }

@@ -120,10 +120,6 @@ public class Log {
      * @return Removed log entries
      */
     public void updateEntries(int fromIndex, List<LogEntry> entries) {
-        if (fromIndex <= commitIndex) {
-            throw new IllegalArgumentException("Cannot update already committed entries!");
-        }
-
         for (int i = 0; i < entries.size(); i++) {
             int currentIndex = fromIndex + i;
             if (currentIndex >= logStorage.getSize()) {
@@ -134,6 +130,10 @@ public class Log {
             LogEntry prevEntry = logStorage.getEntryByIndex(currentIndex);
 
             if (prevEntry != null && prevEntry.getTerm() != entries.get(i).getTerm()) {
+                if (prevEntry.isCommitted()) {
+                    throw new RuntimeException("Something went wrong, server is about to overwrite a committed log entry at index " + currentIndex + "!");
+                }
+
                 logStorage.removeEntriesByRange(currentIndex, logStorage.getSize());
                 logStorage.append(entries.get(i));
             }
