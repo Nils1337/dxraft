@@ -5,6 +5,8 @@ import de.hhu.bsinfo.dxraft.context.RaftContext;
 import de.hhu.bsinfo.dxraft.context.RaftID;
 import de.hhu.bsinfo.dxraft.message.*;
 import de.hhu.bsinfo.dxraft.message.client.ClientRequest;
+import de.hhu.bsinfo.dxraft.message.server.ClientRedirection;
+import de.hhu.bsinfo.dxraft.message.server.ClientResponse;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -31,7 +33,7 @@ public class DatagramNetworkService extends AbstractNetworkService {
             }
             clientSocket = new DatagramSocket();
         } catch (IOException e) {
-            e.printStackTrace();
+            LOGGER.error("Exception creating sockets", e);
         }
     }
 
@@ -41,7 +43,28 @@ public class DatagramNetworkService extends AbstractNetworkService {
         if (packet != null) {
             try {
                 clientSocket.send(packet);
-                return receiveMessageClient();
+
+                boolean received = false;
+                RaftMessage msg = null;
+                while (!received) {
+                    msg = receiveMessageClient();
+                    received = true;
+
+                    // response could be for another (old) request issued by this client
+                    // e.g. a request was committed on leader but crashed immediately after,
+                    // so next leader does not know this entry is committed
+                    // ignore other responses for now
+                    if (msg instanceof ClientResponse) {
+                        ClientResponse response = (ClientResponse) msg;
+                        if (!response.getRequestId().equals(request.getId())) {
+                            LOGGER.debug("received response for old request, waiting for response for current request");
+                            received = false;
+                        }
+                    }
+                }
+
+                return msg;
+
             } catch (IOException e) {
                 LOGGER.error("Error sending message", e);
             }
@@ -73,7 +96,7 @@ public class DatagramNetworkService extends AbstractNetworkService {
     public void startReceiving() {
 
         receiverThread = new Thread(() -> {
-            while (true) {
+            while (!Thread.interrupted()) {
                 RaftMessage message = receiveMessageServer();
                 if (message instanceof MessageDeliverer) {
                     ((MessageDeliverer) message).deliverMessage(getMessageReceiver());
@@ -82,12 +105,20 @@ public class DatagramNetworkService extends AbstractNetworkService {
         });
 
         receiverThread.start();
-
     }
 
     @Override
     public void stopReceiving() {
         receiverThread.interrupt();
+    }
+
+    @Override
+    public void close() {
+        if (serverSocket != null) {
+            serverSocket.close();
+        }
+
+        clientSocket.close();
     }
 
     private DatagramPacket preparePacket(RaftMessage message) {

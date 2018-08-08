@@ -52,7 +52,7 @@ public class WriteRequest extends ClientRequest {
     public ClientResponse buildResponse() {
         RaftAddress address = getSenderAddress();
         if (isCommitted() && address != null) {
-            return new ClientResponse(getSenderAddress(), success);
+            return new ClientResponse(getSenderAddress(), getId(), success);
         }
         return null;
     }

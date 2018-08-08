@@ -2,6 +2,7 @@ package de.hhu.bsinfo.dxraft.message.server;
 
 
 import java.util.List;
+import java.util.UUID;
 
 import de.hhu.bsinfo.dxraft.context.RaftAddress;
 import de.hhu.bsinfo.dxraft.context.RaftID;
@@ -13,20 +14,24 @@ public class ClientResponse extends RaftMessage {
     private boolean success;
     private RaftData value;
     private List<RaftData> listValue;
+    private UUID requestId;
 
-    public ClientResponse(RaftAddress receiverAddress, boolean success) {
+    public ClientResponse(RaftAddress receiverAddress, UUID requestId, boolean success) {
         super(receiverAddress);
         this.success = success;
+        this.requestId = requestId;
     }
 
-    public ClientResponse(RaftAddress receiverAddress, RaftData value) {
+    public ClientResponse(RaftAddress receiverAddress, UUID requestId, RaftData value) {
         super(receiverAddress);
         this.value = value;
+        this.requestId = requestId;
     }
 
-    public ClientResponse(RaftAddress receiverAddress, List<RaftData> value) {
+    public ClientResponse(RaftAddress receiverAddress, UUID requestId, List<RaftData> value) {
         super(receiverAddress);
-        this.listValue = value;
+        listValue = value;
+        this.requestId = requestId;
     }
 
     public boolean isSuccess() {
@@ -39,5 +44,9 @@ public class ClientResponse extends RaftMessage {
 
     public List<RaftData> getListValue() {
         return listValue;
+    }
+
+    public UUID getRequestId() {
+        return requestId;
     }
 }

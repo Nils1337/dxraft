@@ -23,6 +23,7 @@ class ServerStateSpec extends Specification {
         context.getOtherServerIds() >> servers
         state.setTimer(timer)
         state.setLog(log)
+        state.becomeActive()
     }
 
     def "test state changes"() {

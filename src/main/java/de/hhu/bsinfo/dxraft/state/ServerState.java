@@ -282,7 +282,9 @@ public class ServerState {
 
         state = State.FOLLOWER;
         votedFor = null;
-        timer.reset(state);
+        if (!idle) {
+            timer.reset(state);
+        }
     }
 
     public void resetStateAsFollower() {

@@ -31,7 +31,7 @@ public class DeleteRequest extends ClientRequest {
     public ClientResponse buildResponse() {
         RaftAddress address = getSenderAddress();
         if (isCommitted() && address != null) {
-            return new ClientResponse(getSenderAddress(), deletedData);
+            return new ClientResponse(getSenderAddress(), getId(), deletedData);
         }
         return null;
     }

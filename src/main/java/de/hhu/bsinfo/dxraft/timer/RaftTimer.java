@@ -51,7 +51,7 @@ public class RaftTimer {
             randomizedTimeout += ThreadLocalRandom.current().nextInt(0, randomizationAmountInMilliseconds);
         }
 
-        this.timeoutFuture = this.scheduler.schedule(() -> {
+        timeoutFuture = scheduler.schedule(() -> {
             if (timeoutHandler != null) {
                 timeoutHandler.processTimeout();
             }

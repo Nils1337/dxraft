@@ -326,22 +326,23 @@ class RaftServerSpec extends Specification {
             1 * netService.sendMessage({response -> response instanceof ClientRedirection})
     }
 
-    def "test read request"() {
-        given:
-            def request = Mock(ReadRequest)
-            request.isReadRequest() >> true
-
-            def response = Mock(ClientResponse)
-            state.isLeader() >> true
-
-        when:
-            server.processClientRequest(request)
-
-        then:
-            1 * request.onCommit(*_)
-            1 * request.buildResponse() >> response
-            1 * netService.sendMessage(response)
-    }
+    /**Read request currently same as write request*/
+//    def "test read request"() {
+//        given:
+//            def request = Mock(ReadRequest)
+//            request.isReadRequest() >> true
+//
+//            def response = Mock(ClientResponse)
+//            state.isLeader() >> true
+//
+//        when:
+//            server.processClientRequest(request)
+//
+//        then:
+//            1 * request.onCommit(*_)
+//            1 * request.buildResponse() >> response
+//            1 * netService.sendMessage(response)
+//    }
 
     def "test write request"() {
         given:

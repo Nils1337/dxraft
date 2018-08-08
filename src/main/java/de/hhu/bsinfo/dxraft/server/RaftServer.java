@@ -99,6 +99,7 @@ public class RaftServer implements ServerMessageReceiver, TimeoutHandler {
     public void shutdown() {
         if (started) {
             networkService.stopReceiving();
+            networkService.close();
             state.becomeIdle();
         }
     }
@@ -221,7 +222,7 @@ public class RaftServer implements ServerMessageReceiver, TimeoutHandler {
                 int currentCommitIndex = log.getCommitIndex();
                 if (newCommitIndex > currentCommitIndex) {
 
-                    LOGGER.info("Committing the log entries from indices {} to {} because they are replicated on a majority of servers", currentCommitIndex, newCommitIndex);
+                    LOGGER.info("Committing the log entries from indices {} to {} because they are replicated on a majority of servers", currentCommitIndex + 1, newCommitIndex);
                     List<LogEntry> committedEntries = log.commitEntries(newCommitIndex);
 
                     // send responses for every log entry that was handled by this server and is now committed

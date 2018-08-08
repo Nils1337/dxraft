@@ -7,6 +7,7 @@ import de.hhu.bsinfo.dxraft.data.StringData
 import de.hhu.bsinfo.dxraft.server.RaftServer
 import de.hhu.bsinfo.dxraft.server.RaftServerContext
 import spock.lang.Specification
+import spock.lang.Unroll
 
 
 class LocalTest extends Specification {
@@ -93,6 +94,7 @@ class LocalTest extends Specification {
         client.readList("test") == null
     }
 
+    @Unroll
     def "test server crash"() {
         expect:
 
@@ -104,5 +106,16 @@ class LocalTest extends Specification {
 
         client.read("test") == data
 
+        where:
+        i << (1..10)
+
+    }
+
+    def cleanup() {
+        servers.each {server ->
+            server.shutdown()
+        }
+
+        client.shutdown()
     }
 }

@@ -12,15 +12,17 @@ public abstract class AbstractNetworkService {
         return messageReceiver;
     }
 
-    abstract public void sendMessage(RaftMessage message);
+    public abstract void sendMessage(RaftMessage message);
 
-    abstract public void sendMessageToAllServers(RaftMessage message);
+    public abstract void sendMessageToAllServers(RaftMessage message);
 
-    abstract public RaftMessage sendRequest(ClientRequest request);
+    public abstract RaftMessage sendRequest(ClientRequest request);
 
-    abstract public void startReceiving();
+    public abstract void startReceiving();
 
-    abstract public void stopReceiving();
+    public abstract void stopReceiving();
+
+    public abstract void close();
 
     public void setMessageReceiver(ServerMessageReceiver messageReceiver) {
         this.messageReceiver = messageReceiver;

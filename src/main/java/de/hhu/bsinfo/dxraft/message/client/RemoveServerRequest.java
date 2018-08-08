@@ -36,7 +36,7 @@ public class RemoveServerRequest extends ClientRequest {
     public ClientResponse buildResponse() {
         RaftAddress address = getSenderAddress();
         if (isCommitted() && address != null) {
-            return new ClientResponse(getSenderAddress(), true);
+            return new ClientResponse(getSenderAddress(), getId(), true);
         }
         return null;
     }

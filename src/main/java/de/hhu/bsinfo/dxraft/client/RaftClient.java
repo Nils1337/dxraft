@@ -199,6 +199,9 @@ public class RaftClient {
         return null;
     }
 
+    public void shutdown() {
+        networkService.close();
+    }
 
     private ClientResponse sendRequest(ClientRequest request) {
         RaftAddress serverAddress = getRandomServer();
