@@ -21,6 +21,7 @@ class LocalTest extends Specification {
 
     def data = new StringData("data")
     def data2 = new StringData("data2")
+    def data3 = new StringData("data3")
 
     def setup() {
 
@@ -156,7 +157,31 @@ class LocalTest extends Specification {
         where:
         i << (1..10)
 
+    }
 
+    def "test multiple clients"() {
+        setup:
+
+        def localAddress = new RaftAddress("127.0.0.1")
+
+        def context = RaftServerContext.RaftServerContextBuilder
+            .aRaftServerContext()
+            .withLocalAddress(localAddress)
+            .withRaftServers(serverAddresses.clone())
+            .build()
+
+        def client2 = new RaftClient(context)
+
+        expect:
+
+        client.write("test", data, false)
+        client.write("test2", data2, false)
+
+        client2.read("test") == data
+        client2.read("test2") == data2
+
+        client2.write("test", data3, true)
+        client.read("test") == data3
     }
 
     def cleanup() {
