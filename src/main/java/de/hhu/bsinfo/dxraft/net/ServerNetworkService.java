@@ -4,7 +4,7 @@ import de.hhu.bsinfo.dxraft.message.client.ClientRequest;
 import de.hhu.bsinfo.dxraft.message.RaftMessage;
 import de.hhu.bsinfo.dxraft.server.ServerMessageReceiver;
 
-public abstract class AbstractNetworkService {
+public abstract class ServerNetworkService {
 
     private ServerMessageReceiver messageReceiver;
 
@@ -13,8 +13,6 @@ public abstract class AbstractNetworkService {
     }
 
     public abstract void sendMessage(RaftMessage message);
-
-    public abstract RaftMessage sendRequest(ClientRequest request);
 
     public abstract void startReceiving();
 

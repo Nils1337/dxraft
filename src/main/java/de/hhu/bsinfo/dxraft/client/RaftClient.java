@@ -2,7 +2,6 @@ package de.hhu.bsinfo.dxraft.client;
 
 import de.hhu.bsinfo.dxraft.context.RaftAddress;
 import de.hhu.bsinfo.dxraft.context.RaftContext;
-import de.hhu.bsinfo.dxraft.context.RaftID;
 import de.hhu.bsinfo.dxraft.data.ClusterConfigData;
 import de.hhu.bsinfo.dxraft.data.ServerData;
 import de.hhu.bsinfo.dxraft.data.SpecialPaths;
@@ -22,8 +21,9 @@ import de.hhu.bsinfo.dxraft.message.client.RemoveServerRequest;
 import de.hhu.bsinfo.dxraft.message.client.WriteRequest;
 import de.hhu.bsinfo.dxraft.message.server.ClientRedirection;
 import de.hhu.bsinfo.dxraft.message.server.ClientResponse;
-import de.hhu.bsinfo.dxraft.net.DatagramNetworkService;
-import de.hhu.bsinfo.dxraft.net.AbstractNetworkService;
+import de.hhu.bsinfo.dxraft.net.ClientDatagramNetworkService;
+import de.hhu.bsinfo.dxraft.net.ClientNetworkService;
+
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -40,16 +40,16 @@ public class RaftClient {
     private static final int overallTryDuration = 10 * 1000;
 
     private RaftContext context;
-    private AbstractNetworkService networkService;
+    private ClientNetworkService networkService;
 
-    public RaftClient(RaftContext context, AbstractNetworkService networkService) {
+    public RaftClient(RaftContext context, ClientNetworkService networkService) {
         this.context = context;
         this.networkService = networkService;
     }
 
     public RaftClient(RaftContext context) {
         this.context = context;
-        networkService = new DatagramNetworkService(context, true);
+        networkService = new ClientDatagramNetworkService();
     }
 
     public RaftData read(String path) {
@@ -245,30 +245,52 @@ public class RaftClient {
                     serverAddress = getRandomServer();
                 }
             }
-
         }
 
-        LOGGER.error("Failure connecting to cluster", context.getLocalId());
+        LOGGER.error("Failure connecting to cluster");
         // failed to connect to a leader
         return null;
     }
 
     private RaftAddress getRandomServer() {
-        int random = ThreadLocalRandom.current().nextInt(context.getServersIds().size());
+        int random = ThreadLocalRandom.current().nextInt(context.getServerCount());
         return context.getRaftServers().get(random);
     }
 
     public static void main(String[] args) {
 
         //for logging
-        System.setProperty("serverId", "client");
+        System.setProperty("server.id", "client");
 
-        List<RaftAddress> servers = new ArrayList<>();
-        for (int i = 0; i < 3; i++) {
-            servers.add(new RaftAddress(new RaftID((short) i), "127.0.0.1", 5000 + i));
+        String serverString = System.getProperty("servers");
+        if (serverString == null) {
+            LOGGER.error("No server list found. Must be provided with -Dservers parameter. Exiting...");
+            return;
         }
 
-        RaftContext context = new RaftContext(servers, new RaftAddress("127.0.0.1"));
+        List<RaftAddress> addresses = new ArrayList<>();
+        String[] servers = serverString.split(",");
+        for (String server: servers) {
+            String[] address = server.split(":");
+
+            if (address.length != 2) {
+                LOGGER.error("Could not parse server list. Exiting...");
+                return;
+            }
+
+            int port;
+
+            try {
+                port = Integer.parseInt(address[1]);
+            } catch (NumberFormatException e) {
+                LOGGER.error("Could not parse server list. Exiting...", e);
+                return;
+            }
+
+            addresses.add(new RaftAddress(address[0], port));
+        }
+
+        RaftContext context = new RaftContext(addresses);
 
         RaftClient client = new RaftClient(context);
 

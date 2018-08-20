@@ -14,47 +14,12 @@ public class RaftContext {
     // List of all servers in cluster acting as raft servers
     private List<RaftAddress> raftServers;
 
-    private RaftAddress localAddress;
-
-    public RaftContext(List<RaftAddress> raftServers, RaftAddress localAddress) {
-        this.localAddress = localAddress;
+    public RaftContext(List<RaftAddress> raftServers) {
         this.raftServers = new ArrayList<>(raftServers);
-    }
-
-    public Set<RaftID> getServersIds() {
-        return raftServers.stream().map(RaftAddress::getId).collect(Collectors.toSet());
     }
 
     public List<RaftAddress> getRaftServers() {
         return raftServers;
-    }
-
-    public Set<RaftID> getOtherServerIds() {
-        return raftServers.stream().filter(address -> !address.equals(localAddress)).map(RaftAddress::getId).collect(Collectors.toSet());
-    }
-
-    public Set<RaftAddress> getOtherRaftServers() {
-        return raftServers.stream().filter(address -> !address.equals(localAddress)).collect(Collectors.toSet());
-    }
-
-    public RaftID getLocalId() {
-        return localAddress.getId();
-    }
-
-    public RaftAddress getAddressById(RaftID id) {
-
-        if (id.equals(localAddress.getId())) {
-            return localAddress;
-        }
-
-        for (RaftAddress server : raftServers) {
-            if (server.getId().equals(id)) return server;
-        }
-        return null;
-    }
-
-    public RaftAddress getLocalAddress() {
-        return localAddress;
     }
 
     public void addServer(RaftAddress newServer) {

@@ -1,6 +1,7 @@
 package de.hhu.bsinfo.dxraft.state
 
-import de.hhu.bsinfo.dxraft.context.RaftID
+import de.hhu.bsinfo.dxraft.context.RaftAddress
+
 import de.hhu.bsinfo.dxraft.log.Log
 import de.hhu.bsinfo.dxraft.server.RaftServerContext
 import de.hhu.bsinfo.dxraft.timer.RaftTimer
@@ -14,10 +15,7 @@ class ServerStateSpec extends Specification {
     def log = Mock(Log)
     def context = Mock(RaftServerContext)
     def state = new ServerState(context)
-    def id1 = new RaftID(1)
-    def id2 = new RaftID(2)
-    def id3 = new RaftID(3)
-    def servers = [id2, id3]
+    def servers = [2, 3]
 
     def setup() {
         context.getOtherServerIds() >> servers
@@ -34,21 +32,21 @@ class ServerStateSpec extends Specification {
             state.convertStateToCandidate()
         then:
             1 * timer.reset(ServerState.State.CANDIDATE)
-            context.getLocalId() >> id1
+            context.getLocalId() >> 1
 
             state.getCurrentTerm() == 1
             state.isCandidate()
-            state.getVotedFor().is(id1)
+            state.getVotedFor() == 1
 
         when: "election timed out => reset candidate"
             state.resetStateAsCandidate()
         then:
             1 * timer.reset(ServerState.State.CANDIDATE)
-            context.getLocalId() >> id1
+            context.getLocalId() >> 1
 
             state.isCandidate()
             state.getCurrentTerm() == 2
-            state.getVotedFor().is(id1)
+            state.getVotedFor() == 1
 
         when: "election successful => convert to leader"
             state.convertStateToLeader()
@@ -74,7 +72,7 @@ class ServerStateSpec extends Specification {
         then:
             1 * timer.reset(ServerState.State.FOLLOWER)
             state.isFollower()
-            state.getVotedFor() == null
+            state.getVotedFor() == RaftAddress.INVALID_ID
     }
 
     def "test updating term"() {
@@ -86,7 +84,7 @@ class ServerStateSpec extends Specification {
             1 * timer.reset(ServerState.State.FOLLOWER)
             state.isFollower()
             state.getCurrentTerm() == 2
-            state.getVotedFor() == null
+            state.getVotedFor() == RaftAddress.INVALID_ID
 
         when:
             state.updateTerm(3)
@@ -94,7 +92,7 @@ class ServerStateSpec extends Specification {
             1 * timer.reset(ServerState.State.FOLLOWER)
             state.isFollower()
             state.getCurrentTerm() == 3
-            state.getVotedFor() == null
+            state.getVotedFor() == RaftAddress.INVALID_ID
     }
 
 
@@ -104,8 +102,8 @@ class ServerStateSpec extends Specification {
             state.updateTerm(currentTerm)
             state.setState(ServerState.State.LEADER)
 
-            state.updateMatchIndex(id1, index1)
-            state.updateMatchIndex(id2, index2)
+            state.updateMatchIndex(1, index1)
+            state.updateMatchIndex(2, index2)
 
             context.getServerCount() >> 5
             log.getCommitIndex() >> -1

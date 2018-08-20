@@ -1,6 +1,7 @@
 package de.hhu.bsinfo.dxraft.server
 
-import de.hhu.bsinfo.dxraft.context.RaftID
+import de.hhu.bsinfo.dxraft.context.RaftAddress
+
 import de.hhu.bsinfo.dxraft.log.Log
 import de.hhu.bsinfo.dxraft.message.server.AppendEntriesRequest
 import de.hhu.bsinfo.dxraft.message.server.AppendEntriesResponse
@@ -8,22 +9,21 @@ import de.hhu.bsinfo.dxraft.message.server.ClientRedirection
 import de.hhu.bsinfo.dxraft.message.client.ClientRequest
 import de.hhu.bsinfo.dxraft.message.server.ClientResponse
 import de.hhu.bsinfo.dxraft.message.client.DeleteRequest
-import de.hhu.bsinfo.dxraft.message.client.ReadRequest
 import de.hhu.bsinfo.dxraft.message.server.VoteRequest
 import de.hhu.bsinfo.dxraft.message.server.VoteResponse
 import de.hhu.bsinfo.dxraft.message.client.WriteRequest
-import de.hhu.bsinfo.dxraft.net.AbstractNetworkService
+import de.hhu.bsinfo.dxraft.net.ServerNetworkService
 
 import de.hhu.bsinfo.dxraft.log.LogEntry
 import de.hhu.bsinfo.dxraft.state.ServerState
 import de.hhu.bsinfo.dxraft.timer.RaftTimer
-import spock.lang.Shared
 import spock.lang.Specification
+import spock.lang.Unroll
 
 class RaftServerSpec extends Specification {
 
     def context = Mock(RaftServerContext)
-    def netService = Mock(AbstractNetworkService)
+    def netService = Mock(ServerNetworkService)
     def log = Mock(Log)
     def timer = Mock(RaftTimer)
     def state = Mock(ServerState)
@@ -37,13 +37,7 @@ class RaftServerSpec extends Specification {
             .withState(state)
             .build()
 
-    @Shared
-    def id1 = new RaftID(1)
-    @Shared
-    def id2 = new RaftID(2)
-    @Shared
-    def id3 = new RaftID(3)
-
+    @Unroll
     def "test vote request"() {
         given:
             def voteRequest = Mock(VoteRequest)
@@ -66,13 +60,13 @@ class RaftServerSpec extends Specification {
 
         where:
             msgTerm | localTerm | isFollower | upd | sender | votedFor || granted
-            2 | 1 | true | false | null | null || false
-            2 | 1 | true | true | null | null || true
-            1 | 2 | true | true | null | null || false
-            4 | 2 | true | false | null | null || false
-            3 | 5 | true | false | null | null || false
-            1 | 1 | true | true | id1 | id2 || false
-            1 | 1 | true | true | id1 | id1 || true
+            2 | 1 | true | false | null | RaftAddress.INVALID_ID || false
+            2 | 1 | true | true | null | RaftAddress.INVALID_ID || true
+            1 | 2 | true | true | null | RaftAddress.INVALID_ID || false
+            4 | 2 | true | false | null | RaftAddress.INVALID_ID || false
+            3 | 5 | true | false | null | RaftAddress.INVALID_ID || false
+            1 | 1 | true | true | 1 | 2 || false
+            1 | 1 | true | true | 1 | 1 || true
 
             termUpdate = msgTerm > localTerm ? 1 : 0
     }
@@ -114,9 +108,9 @@ class RaftServerSpec extends Specification {
         then: "should update votes map but not convert state"
             state.isCandidate() >> true
             voteResponse.isVoteGranted() >> false
-            voteResponse.getSenderId() >> id1
+            voteResponse.getSenderId() >> 1
 
-            1 * state.updateVote(id1, false)
+            1 * state.updateVote(1, false)
             0 * state.convertStateToLeader()
     }
 
@@ -126,28 +120,25 @@ class RaftServerSpec extends Specification {
             state.isCandidate() >> true
             voteResponse.isVoteGranted() >> true
             context.getServerCount() >> 3
-            context.getOtherServerIds() >> (1..2).collect {
-                Mock(RaftID)
-            }
-
+            context.getOtherServerIds() >> (1..2)
         when:
             server.processVoteResponse(voteResponse)
 
         then: "should update votes map"
-            voteResponse.getSenderId() >> id1
+            voteResponse.getSenderId() >> 1
             state.getVotesCount() >> 1
 
-            1 * state.updateVote(id1, true)
+            1 * state.updateVote(1, true)
             0 * state.convertStateToLeader()
 
         when:
             server.processVoteResponse(voteResponse)
 
         then: "should update votes map, convert to leader and send heartbeats"
-            voteResponse.getSenderId() >> id2
+            voteResponse.getSenderId() >> 2
             state.getVotesCount() >> 2
 
-            1 * state.updateVote(id2, true)
+            1 * state.updateVote(2, true)
             1 * state.convertStateToLeader()
             2 * netService.sendMessage({msg -> msg instanceof AppendEntriesRequest})
     }
@@ -258,16 +249,16 @@ class RaftServerSpec extends Specification {
 
         then:
             response.isSuccess() >> false
-            response.getSenderId() >> id1
+            response.getSenderId() >> 1
 
             state.isLeader() >> isLeader
             log.getEntryByIndex(_) >> logEntry
-            state.getNextIndex(id1) >> 1
+            state.getNextIndex(1) >> 1
 
-            doSomething * state.decrementNextIndex(id1)
+            doSomething * state.decrementNextIndex(1)
             doSomething * netService.sendMessage({ request ->
                 request instanceof AppendEntriesRequest &&
-                        request.receiverId == id1 &&
+                        request.receiverId == 1 &&
                         request.prevLogIndex == 0})
         where:
             isLeader || doSomething
@@ -287,7 +278,7 @@ class RaftServerSpec extends Specification {
 
             with (response) {
                 isSuccess() >> true
-                getSenderId() >> id1
+                getSenderId() >> 1
                 getMatchIndex() >> 3
             }
 
@@ -311,8 +302,8 @@ class RaftServerSpec extends Specification {
             2 * netService.sendMessage(_)
 
             //index maps should be updated correctly
-            1 * state.updateMatchIndex(id1, 3)
-            1 * state.updateNextIndex(id1, 4)
+            1 * state.updateMatchIndex(1, 3)
+            1 * state.updateNextIndex(1, 4)
         }
 
     def "test redirection"() {
@@ -324,7 +315,7 @@ class RaftServerSpec extends Specification {
 
         then:
             state.isLeader() >> false
-            request.getSenderId() >> id1
+            request.getSenderId() >> 1
 
             1 * netService.sendMessage({response -> response instanceof ClientRedirection})
     }
@@ -350,7 +341,7 @@ class RaftServerSpec extends Specification {
     def "test write request"() {
         given:
             def request = Mock(WriteRequest)
-            def servers = [id1, id2]
+            def servers = [1, 2]
             context.getOtherServerIds() >> servers
 
             state.isLeader() >> true
@@ -371,7 +362,7 @@ class RaftServerSpec extends Specification {
     def "test delete request"() {
         given:
             def request = Mock(DeleteRequest)
-            def servers = [id1, id2, id3]
+            def servers = [1, 2, 3]
             context.getOtherServerIds() >> servers
 
             state.isLeader() >> true

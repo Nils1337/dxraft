@@ -2,7 +2,7 @@ package de.hhu.bsinfo.dxraft
 
 import de.hhu.bsinfo.dxraft.client.RaftClient
 import de.hhu.bsinfo.dxraft.context.RaftAddress
-import de.hhu.bsinfo.dxraft.context.RaftID
+import de.hhu.bsinfo.dxraft.context.RaftContext
 import de.hhu.bsinfo.dxraft.data.StringData
 import de.hhu.bsinfo.dxraft.server.RaftServer
 import de.hhu.bsinfo.dxraft.server.RaftServerContext
@@ -26,11 +26,11 @@ class LocalTest extends Specification {
     def setup() {
 
         serverCount.times {
-            serverAddresses << new RaftAddress(new RaftID(it), "127.0.0.1", portFrom + it)
+            serverAddresses << new RaftAddress(it, "127.0.0.1", portFrom + it)
         }
 
         serverCount.times {
-            def localAddress = new RaftAddress(new RaftID(it), "127.0.0.1", portFrom + it)
+            def localAddress = new RaftAddress(it, "127.0.0.1", portFrom + it)
 
             def context = RaftServerContext.RaftServerContextBuilder
                 .aRaftServerContext()
@@ -51,14 +51,7 @@ class LocalTest extends Specification {
             server.bootstrapNewCluster()
         }
 
-        def localAddress = new RaftAddress("127.0.0.1")
-
-        def context = RaftServerContext.RaftServerContextBuilder
-            .aRaftServerContext()
-            .withLocalAddress(localAddress)
-            .withRaftServers(serverAddresses)
-            .build()
-
+        def context = new RaftContext(serverAddresses)
         client = new RaftClient(context)
     }
 
@@ -107,8 +100,8 @@ class LocalTest extends Specification {
 
         client.read("test") == data
 
-        where:
-        i << (1..10)
+//        where:
+//        i << (1..10)
 
     }
 
@@ -116,7 +109,7 @@ class LocalTest extends Specification {
     def "test config changes"() {
         setup:
 
-        def newAddress = new RaftAddress(new RaftID(3), "127.0.0.1", portFrom + 3)
+        def newAddress = new RaftAddress(3, "127.0.0.1", portFrom + 3)
 
         def context = RaftServerContext.RaftServerContextBuilder
             .aRaftServerContext()
@@ -154,8 +147,8 @@ class LocalTest extends Specification {
         cleanup:
         newServer.shutdown()
 
-        where:
-        i << (1..10)
+//        where:
+//        i << (1..10)
 
     }
 

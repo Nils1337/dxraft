@@ -1,6 +1,6 @@
 package de.hhu.bsinfo.dxraft.state;
 
-import de.hhu.bsinfo.dxraft.context.RaftID;
+import de.hhu.bsinfo.dxraft.context.RaftAddress;
 import de.hhu.bsinfo.dxraft.log.Log;
 import de.hhu.bsinfo.dxraft.log.LogEntry;
 import de.hhu.bsinfo.dxraft.message.client.AddServerRequest;
@@ -48,10 +48,10 @@ public class ServerState {
 
     // Vote the server gave in its current term
     // TODO persist
-    private RaftID votedFor;
+    private int votedFor = RaftAddress.INVALID_ID;
 
     // Server that this server believes is the current leader
-    private RaftID currentLeader;
+    private int currentLeader = RaftAddress.INVALID_ID;
 
     // in idle state, timer is not started
     // -> server still answers vote and append entries request but does not try to become leader
@@ -62,7 +62,7 @@ public class ServerState {
     ///////////////////
 
     // map for the received votes
-    private Map<RaftID, Boolean> votesMap = new HashMap<>();
+    private Map<Integer, Boolean> votesMap = new HashMap<Integer, Boolean>();
 
     /**
      * The total amount of granted votes including the vote of the server itself
@@ -79,7 +79,7 @@ public class ServerState {
         return  votes;
     }
 
-    public void updateVote(RaftID id, boolean voteGranted) {
+    public void updateVote(int id, boolean voteGranted) {
         if (state != State.CANDIDATE) {
             throw new IllegalStateException("Server could not update vote map because state is " + state + " but should be CANDIDATE!");
         }
@@ -128,50 +128,50 @@ public class ServerState {
     }
 
     // map for the next indices to send to each server
-    private Map<RaftID, Integer> nextIndexMap = new HashMap<>();
+    private Map<Integer, Integer> nextIndexMap = new HashMap<Integer, Integer>();
 
     private void resetNextIndices() {
-        for (RaftID id: context.getOtherServerIds()) {
+        for (Integer id: context.getOtherServerIds()) {
             nextIndexMap.put(id, log.getLastIndex() + 1);
         }
     }
 
-    public void decrementNextIndex(RaftID id) {
+    public void decrementNextIndex(int id) {
         if (state != State.LEADER) {
             throw new IllegalStateException("Server could not update next index because state is " + state + " but should be LEADER!");
         }
         nextIndexMap.computeIfPresent(id, (k, v) -> v > 0 ? v - 1 : v);
     }
 
-    public void updateNextIndex(RaftID id, int index) {
+    public void updateNextIndex(int id, int index) {
         if (state != State.LEADER) {
             throw new IllegalStateException("Server could not update next index because state is " + state + " but should be LEADER!");
         }
         nextIndexMap.put(id, index);
     }
 
-    public int getNextIndex(RaftID id) {
+    public int getNextIndex(int id) {
         Integer index = nextIndexMap.get(id);
         return index == null ? 0 : index;
     }
 
     // map for the indices that match with the local log
-    private Map<RaftID, Integer> matchIndexMap = new HashMap<>();
+    private Map<Integer, Integer> matchIndexMap = new HashMap<Integer, Integer>();
 
     private void resetMatchIndices() {
-        for (RaftID id: context.getOtherServerIds()) {
+        for (Integer id: context.getOtherServerIds()) {
             nextIndexMap.put(id, 0);
         }
     }
 
-    public void updateMatchIndex(RaftID id, int index) {
+    public void updateMatchIndex(int id, int index) {
         if (state != State.LEADER) {
             throw new IllegalStateException("Server could not update match index because state is " + state + " but should be LEADER!");
         }
         matchIndexMap.put(id, index);
     }
 
-    public int getMatchIndex(RaftID id) {
+    public int getMatchIndex(int id) {
         Integer index = matchIndexMap.get(id);
         return index == null ? -1 : index;
     }
@@ -218,18 +218,18 @@ public class ServerState {
         return currentTerm;
     }
 
-    public void updateLeader(RaftID leaderId) {
+    public void updateLeader(int leaderId) {
         if (state != State.FOLLOWER) {
             throw new IllegalStateException("Server could not set leader because state is " + state + " but should be FOLLOWER!");
         }
         currentLeader = leaderId;
     }
 
-    public RaftID getCurrentLeader() {
+    public int getCurrentLeader() {
         return currentLeader;
     }
 
-    public void updateVote(RaftID votedFor) {
+    public void updateVote(int votedFor) {
         if (state != State.FOLLOWER) {
             throw new IllegalStateException("Server could not set vote because state is " + state + " but should be FOLLOWER!");
         }
@@ -240,7 +240,7 @@ public class ServerState {
         }
     }
 
-    public RaftID getVotedFor() {
+    public int getVotedFor() {
         return votedFor;
     }
 
@@ -281,7 +281,7 @@ public class ServerState {
         }
 
         state = State.FOLLOWER;
-        votedFor = null;
+        votedFor = RaftAddress.INVALID_ID;
         if (!idle) {
             timer.reset(state);
         }
@@ -314,7 +314,7 @@ public class ServerState {
         }
 
         currentTerm++;
-        currentLeader = null;
+        currentLeader = RaftAddress.INVALID_ID;
         votesMap.clear();
         votedFor = context.getLocalId();
         timer.reset(state);
@@ -359,8 +359,8 @@ public class ServerState {
             resetStateAsFollower();
         }
         currentTerm = term;
-        currentLeader = null;
-        votedFor = null;
+        currentLeader = RaftAddress.INVALID_ID;
+        votedFor = RaftAddress.INVALID_ID;
     }
 
     /**

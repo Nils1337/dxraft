@@ -3,12 +3,16 @@ package de.hhu.bsinfo.dxraft.context;
 import java.io.Serializable;
 import java.util.Objects;
 
+import com.google.gson.JsonElement;
+
 public class RaftAddress implements Serializable {
-    private RaftID id;
+    public static final int INVALID_ID = -1;
+
+    private int id;
     private String ip;
     private int port = -1;
 
-    public RaftAddress(RaftID id, String ip, int port) {
+    public RaftAddress(int id, String ip, int port) {
         this.id = id;
         this.ip = ip;
         this.port = port;
@@ -23,7 +27,9 @@ public class RaftAddress implements Serializable {
         this.ip = ip;
     }
 
-    public RaftID getId() {
+    public RaftAddress() {}
+
+    public int getId() {
         return id;
     }
 
@@ -41,17 +47,22 @@ public class RaftAddress implements Serializable {
 
     @Override
     public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
-        RaftAddress that = (RaftAddress) o;
-        return port == that.port &&
-                Objects.equals(ip, that.ip);
+        if (this == o) {
+            return true;
+        }
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
+        RaftAddress address = (RaftAddress) o;
+        return id == address.id &&
+            port == address.port &&
+            Objects.equals(ip, address.ip);
     }
 
     @Override
     public int hashCode() {
 
-        return Objects.hash(ip, port);
+        return Objects.hash(id, ip, port);
     }
 
     @Override

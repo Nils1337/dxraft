@@ -3,9 +3,9 @@ package de.hhu.bsinfo.dxraft.message.client;
 import java.util.List;
 
 import de.hhu.bsinfo.dxraft.context.RaftAddress;
-import de.hhu.bsinfo.dxraft.context.RaftContext;
 import de.hhu.bsinfo.dxraft.data.RaftData;
 import de.hhu.bsinfo.dxraft.message.server.ClientResponse;
+import de.hhu.bsinfo.dxraft.server.RaftServerContext;
 import de.hhu.bsinfo.dxraft.state.ServerState;
 import de.hhu.bsinfo.dxraft.state.StateMachine;
 
@@ -32,7 +32,7 @@ public class RemoveFromListRequest extends ClientRequest {
     }
 
     @Override
-    public void onCommit(RaftContext context, StateMachine stateMachine, ServerState state) {
+    public void onCommit(RaftServerContext context, StateMachine stateMachine, ServerState state) {
         if (!isCommitted()) {
             List<RaftData> list = stateMachine.readList(name);
             if (list != null) {

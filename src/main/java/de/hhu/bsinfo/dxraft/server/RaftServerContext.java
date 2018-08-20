@@ -6,6 +6,8 @@ import de.hhu.bsinfo.dxraft.context.RaftContext;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 public class RaftServerContext extends RaftContext {
 
@@ -21,8 +23,11 @@ public class RaftServerContext extends RaftContext {
     private int heartbeatTimeoutDuration;
     private int heartbeatRandomizationAmount;
 
+    private RaftAddress localAddress;
+
     public RaftServerContext(List<RaftAddress> raftServers, RaftAddress localAddress, int followerTimeoutDuration, int followerRandomizationAmount, int electionTimeoutDuration, int electionRandomizationAmount, int heartbeatTimeoutDuration, int heartbeatRandomizationAmount) {
-        super(raftServers, localAddress);
+        super(raftServers);
+        this.localAddress = localAddress;
         this.followerTimeoutDuration = followerTimeoutDuration;
         this.followerRandomizationAmount = followerRandomizationAmount;
         this.electionTimeoutDuration = electionTimeoutDuration;
@@ -55,14 +60,48 @@ public class RaftServerContext extends RaftContext {
         return heartbeatRandomizationAmount;
     }
 
+    public Set<Integer> getOtherServerIds() {
+        return getRaftServers().stream().filter(address -> !address.equals(localAddress)).map(RaftAddress::getId).collect(Collectors
+            .toSet());
+    }
+
+    public Set<RaftAddress> getOtherRaftServers() {
+        return getRaftServers().stream().filter(address -> !address.equals(localAddress)).collect(Collectors.toSet());
+    }
+
+    public int getLocalId() {
+        return localAddress.getId();
+    }
+
+    public RaftAddress getAddressById(int id) {
+
+        if (id == localAddress.getId()) {
+            return localAddress;
+        }
+
+        for (RaftAddress server : getRaftServers()) {
+            if (server.getId() == id) return server;
+        }
+        return null;
+    }
+
+    public RaftAddress getLocalAddress() {
+        return localAddress;
+    }
+
+
+    public Set<Integer> getServersIds() {
+        return getRaftServers().stream().map(RaftAddress::getId).collect(Collectors.toSet());
+    }
+
     public static final class RaftServerContextBuilder {
         private RaftAddress localAddress;
         private List<RaftAddress> raftServers = new ArrayList<>();
-        private int followerTimeoutDuration = 500;
+        private int followerTimeoutDuration = 100;
         private int followerRandomizationAmount = 50;
-        private int electionTimeoutDuration = 500;
+        private int electionTimeoutDuration = 100;
         private int electionRandomizationAmount = 50;
-        private int heartbeatTimeoutDuration = 100;
+        private int heartbeatTimeoutDuration = 50;
         private int heartbeatRandomizationAmount = 0;
 
         private RaftServerContextBuilder() {

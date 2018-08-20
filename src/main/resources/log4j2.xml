@@ -2,9 +2,9 @@
 <Configuration status="warn">
     <Appenders>
         <Routing name="RoutingAppender">
-            <Routes pattern="${sys:serverId}">
+            <Routes pattern="${sys:server.id}">
                 <Route>
-                    <File name="${sys:serverId}" append="false" fileName="log/raft-${sys:serverId}.log">
+                    <File name="${sys:server.id}" append="false" fileName="log/server-${sys:server.id}.log">
                         <PatternLayout pattern="%highlight{[%d{HH:mm:ss.SSS}][%t][%-5level][%logger{36}] %msg%n}{FATAL=red, ERROR=red, WARN=yellow, INFO=blue, DEBUG=green, TRACE=white}"/>
                     </File>
                 </Route>

@@ -1,8 +1,8 @@
 package de.hhu.bsinfo.dxraft.log;
 
-import de.hhu.bsinfo.dxraft.context.RaftContext;
 import de.hhu.bsinfo.dxraft.message.client.ClientRequest;
 import de.hhu.bsinfo.dxraft.message.server.ClientResponse;
+import de.hhu.bsinfo.dxraft.server.RaftServerContext;
 import de.hhu.bsinfo.dxraft.state.ServerState;
 import de.hhu.bsinfo.dxraft.state.StateMachine;
 
@@ -14,9 +14,9 @@ public interface LogEntry extends Serializable {
 
     void updateClientRequest(ClientRequest request);
 
-    default void onAppend(RaftContext context, StateMachine stateMachine, ServerState state) {}
-    default void onCommit(RaftContext context, StateMachine stateMachine, ServerState state) {}
-    default void onRemove(RaftContext context, StateMachine stateMachine) {}
+    default void onAppend(RaftServerContext context, StateMachine stateMachine, ServerState state) {}
+    default void onCommit(RaftServerContext context, StateMachine stateMachine, ServerState state) {}
+    default void onRemove(RaftServerContext context, StateMachine stateMachine) {}
 
     boolean isCommitted();
 }

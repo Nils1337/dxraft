@@ -1,10 +1,10 @@
 package de.hhu.bsinfo.dxraft.message.client;
 
 import de.hhu.bsinfo.dxraft.context.RaftAddress;
-import de.hhu.bsinfo.dxraft.context.RaftContext;
 import de.hhu.bsinfo.dxraft.data.ClusterConfigData;
 import de.hhu.bsinfo.dxraft.data.SpecialPaths;
 import de.hhu.bsinfo.dxraft.message.server.ClientResponse;
+import de.hhu.bsinfo.dxraft.server.RaftServerContext;
 import de.hhu.bsinfo.dxraft.state.ServerState;
 import de.hhu.bsinfo.dxraft.state.StateMachine;
 
@@ -23,7 +23,7 @@ public class RemoveServerRequest extends ClientRequest {
     }
 
     @Override
-    public void onAppend(RaftContext context, StateMachine stateMachine, ServerState state) {
+    public void onAppend(RaftServerContext context, StateMachine stateMachine, ServerState state) {
         super.onAppend(context, stateMachine, state);
         if (!serverRemoved) {
             context.removeServer(oldServer);
@@ -42,7 +42,7 @@ public class RemoveServerRequest extends ClientRequest {
     }
 
     @Override
-    public void onRemove(RaftContext context, StateMachine stateMachine) {
+    public void onRemove(RaftServerContext context, StateMachine stateMachine) {
         if (serverRemoved) {
             context.addServer(oldServer);
             serverRemoved = false;
@@ -50,7 +50,7 @@ public class RemoveServerRequest extends ClientRequest {
     }
 
     @Override
-    public void onCommit(RaftContext context, StateMachine stateMachine, ServerState state) {
+    public void onCommit(RaftServerContext context, StateMachine stateMachine, ServerState state) {
         if (oldServer.equals(context.getLocalAddress())) {
             // if the removed server is the server itself, it should now stop taking part in the cluster
             state.becomeIdle();

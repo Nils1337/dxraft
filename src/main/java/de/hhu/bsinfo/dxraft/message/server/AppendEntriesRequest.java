@@ -1,6 +1,5 @@
 package de.hhu.bsinfo.dxraft.message.server;
 
-import de.hhu.bsinfo.dxraft.context.RaftID;
 import de.hhu.bsinfo.dxraft.log.LogEntry;
 import de.hhu.bsinfo.dxraft.server.ServerMessageReceiver;
 
@@ -13,7 +12,7 @@ public class AppendEntriesRequest extends ServerMessage {
     private int leaderCommitIndex;
     private List<LogEntry> entries;
 
-    public AppendEntriesRequest(RaftID receiverId, int term, int prevLogIndex, int prevLogTerm, int leaderCommitIndex, List<LogEntry> entries) {
+    public AppendEntriesRequest(int receiverId, int term, int prevLogIndex, int prevLogTerm, int leaderCommitIndex, List<LogEntry> entries) {
         super(receiverId, term);
         this.prevLogIndex = prevLogIndex;
         this.prevLogTerm = prevLogTerm;

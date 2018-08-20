@@ -1,19 +1,17 @@
 package de.hhu.bsinfo.dxraft.message;
 
 import de.hhu.bsinfo.dxraft.context.RaftAddress;
-import de.hhu.bsinfo.dxraft.context.RaftID;
-import de.hhu.bsinfo.dxraft.server.ServerMessageReceiver;
 
 import java.io.Serializable;
 
 public class RaftMessage implements Serializable {
-    protected RaftID receiverId;
+    protected int receiverId;
     protected RaftAddress senderAddress;
     protected RaftAddress receiverAddress;
 
     protected RaftMessage() {}
 
-    protected RaftMessage(RaftID receiverId) {
+    protected RaftMessage(int receiverId) {
         this.receiverId = receiverId;
     }
 
@@ -37,15 +35,15 @@ public class RaftMessage implements Serializable {
         this.receiverAddress = receiverAddress;
     }
 
-    public RaftID getSenderId() {
+    public int getSenderId() {
         return senderAddress.getId();
     }
 
-    public RaftID getReceiverId() {
+    public int getReceiverId() {
         return receiverId;
     }
 
-    public void setReceiverId(RaftID receiverId) {
+    public void setReceiverId(int receiverId) {
         this.receiverId = receiverId;
     }
 }
