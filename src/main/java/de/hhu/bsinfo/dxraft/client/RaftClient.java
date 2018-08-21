@@ -11,6 +11,7 @@ import de.hhu.bsinfo.dxraft.data.RaftData;
 import de.hhu.bsinfo.dxraft.message.client.AddServerRequest;
 import de.hhu.bsinfo.dxraft.message.client.AppendToListRequest;
 import de.hhu.bsinfo.dxraft.message.client.ClientRequest;
+import de.hhu.bsinfo.dxraft.message.client.CompareAndSetRequest;
 import de.hhu.bsinfo.dxraft.message.client.DeleteListRequest;
 import de.hhu.bsinfo.dxraft.message.client.ReadListRequest;
 import de.hhu.bsinfo.dxraft.message.client.RemoveFromListRequest;
@@ -93,6 +94,15 @@ public class RaftClient {
 
     public boolean write(String name, short value, boolean overwrite) {
         ClientResponse response = sendRequest(new WriteRequest(name, new StringData(String.valueOf(value)), overwrite));
+        if (response != null) {
+            return response.isSuccess();
+        }
+
+        return false;
+    }
+
+    public boolean compareAndSet(String name, RaftData value, RaftData compareValue) {
+        ClientResponse response = sendRequest(new CompareAndSetRequest(name, value, compareValue));
         if (response != null) {
             return response.isSuccess();
         }
