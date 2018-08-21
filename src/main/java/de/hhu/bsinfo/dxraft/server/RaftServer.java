@@ -215,41 +215,7 @@ public class RaftServer implements ServerMessageReceiver, TimeoutHandler {
                 state.updateMatchIndex(response.getSenderId(), response.getMatchIndex());
                 state.updateNextIndex(response.getSenderId(), response.getMatchIndex() + 1);
 
-                int newCommitIndex = state.getNewCommitIndex();
-                int currentCommitIndex = log.getCommitIndex();
-                if (newCommitIndex > currentCommitIndex) {
-
-                    LOGGER.info("Committing the log entries from indices {} to {} because they are replicated on a majority of servers", currentCommitIndex + 1, newCommitIndex);
-                    List<LogEntry> committedEntries = log.commitEntries(newCommitIndex);
-
-                    // send responses for every log entry that was handled by this server and is now committed
-                    for (LogEntry entry: committedEntries) {
-
-                        if (entry instanceof AddServerRequest || entry instanceof RemoveServerRequest) {
-                            state.popPendingConfigChangeRequest();
-                            ClientRequest next = state.getPendingConfigChangeRequest();
-                            if (next != null) {
-                                log.append(next);
-
-                                LOGGER.debug("Continuing with next pending configuration change");
-                                // update logs of all servers
-                                for (int server : context.getOtherServerIds()) {
-                                    sendAppendEntriesRequest(server);
-                                }
-                            }
-                        }
-
-                        ClientResponse clientResponse = entry.buildResponse();
-
-                        if (clientResponse != null) {
-                            LOGGER.debug("Sending response to client {} for index {} because it was committed", clientResponse.getReceiverAddress(), log.indexOf(entry));
-
-                            networkService.sendMessage(clientResponse);
-                        } else {
-                            LOGGER.trace("Wanted to send a response but response could not be built");
-                        }
-                    }
-                }
+                commitEntries();
             }
         }
 
@@ -260,7 +226,6 @@ public class RaftServer implements ServerMessageReceiver, TimeoutHandler {
     // TODO improve performance of configuration changes by catching up new servers before propagating the change to followers
     @Override
     public synchronized void processClientRequest(ClientRequest request) {
-
         // serve request if server is leader
         if (state.isLeader()) {
 
@@ -307,9 +272,15 @@ public class RaftServer implements ServerMessageReceiver, TimeoutHandler {
                 log.append(request);
 
                 LOGGER.debug("Received request from client {} -> Sending append entries requests to followers", request.getSenderAddress());
-                // update logs of all servers
-                for (int server : context.getOtherServerIds()) {
-                    sendAppendEntriesRequest(server);
+
+                // instantly commit entry if no other server in cluster
+                // else send append entries requests
+                if (context.getOtherRaftServers().isEmpty()) {
+                    commitEntries();
+                } else {
+                    for (int server : context.getOtherServerIds()) {
+                        sendAppendEntriesRequest(server);
+                    }
                 }
             }
 //            }
@@ -332,7 +303,15 @@ public class RaftServer implements ServerMessageReceiver, TimeoutHandler {
             // server timed out as follower, so the leader is not available
             // -> server becomes candidate and starts election
             state.convertStateToCandidate();
-            sendVoteRequests();
+
+            // instantly become leader if no other servers in cluster
+            // else send vote requests
+            if (context.getOtherRaftServers().isEmpty()) {
+                state.convertStateToLeader();
+            } else {
+                sendVoteRequests();
+            }
+
 
         } else if (state.isCandidate()) {
 
@@ -389,6 +368,41 @@ public class RaftServer implements ServerMessageReceiver, TimeoutHandler {
     private void checkTerm(int term) {
         if (state.getCurrentTerm() < term) {
             state.updateTerm(term);
+        }
+    }
+
+    private void commitEntries() {
+        int newCommitIndex = state.getNewCommitIndex();
+        int currentCommitIndex = log.getCommitIndex();
+        if (newCommitIndex > currentCommitIndex) {
+            LOGGER.info("Committing the log entries from indices {} to {} because they are replicated on a majority of servers", currentCommitIndex + 1, newCommitIndex);
+            List<LogEntry> committedEntries = log.commitEntries(newCommitIndex);
+
+            // send responses for every log entry that was handled by this server and is now committed
+            for (LogEntry entry: committedEntries) {
+                if (entry instanceof AddServerRequest || entry instanceof RemoveServerRequest) {
+                    state.popPendingConfigChangeRequest();
+                    ClientRequest next = state.getPendingConfigChangeRequest();
+                    if (next != null) {
+                        log.append(next);
+
+                        LOGGER.debug("Continuing with next pending configuration change");
+                        // update logs of all servers
+                        for (int server : context.getOtherServerIds()) {
+                            sendAppendEntriesRequest(server);
+                        }
+                    }
+                }
+
+                ClientResponse clientResponse = entry.buildResponse();
+
+                if (clientResponse != null) {
+                    LOGGER.debug("Sending response to client {} for index {} because it was committed", clientResponse.getReceiverAddress(), log.indexOf(entry));
+                    networkService.sendMessage(clientResponse);
+                } else {
+                    LOGGER.trace("Wanted to send a response but response could not be built");
+                }
+            }
         }
     }
 
