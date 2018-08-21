@@ -21,8 +21,8 @@ public class WriteRequest extends ClientRequest {
         this.overwrite = overwrite;
     }
 
-    public WriteRequest(String path, RaftData value) {
-        this.name = path;
+    public WriteRequest(String name, RaftData value) {
+        this.name = name;
         this.value = value;
     }
 
