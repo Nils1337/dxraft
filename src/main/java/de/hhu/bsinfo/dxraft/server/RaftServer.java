@@ -22,7 +22,6 @@ import de.hhu.bsinfo.dxraft.timer.TimeoutHandler;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import java.util.ArrayList;
 import java.util.List;
 
 public class RaftServer implements ServerMessageReceiver, TimeoutHandler {

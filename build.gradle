@@ -38,7 +38,8 @@ dependencies {
 jar {
     manifest {
         attributes('Implementation-Title': project.name,
-            'Implementation-Version': project.version)
+            'Implementation-Version': project.version,
+            'Main-Class': 'de.hhu.bsinfo.dxraft.DXRaft')
     }
 
     from { configurations.compileClasspath.collect { it.isDirectory() ? it : zipTree(it) } }

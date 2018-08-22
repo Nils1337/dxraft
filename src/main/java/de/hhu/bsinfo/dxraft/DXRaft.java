@@ -1,6 +1,9 @@
 package de.hhu.bsinfo.dxraft;
 
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.Reader;
 import java.lang.reflect.Type;
 import java.net.URISyntaxException;
 import java.net.URL;
@@ -57,19 +60,15 @@ public final class DXRaft {
         Gson gson = new Gson();
         JsonObject config;
 
-        try {
-            URL configUrl = DXRaft.class.getClassLoader().getResource(CONFIG_FILE_PATH);
+        InputStream configStream = DXRaft.class.getClassLoader().getResourceAsStream(CONFIG_FILE_PATH);
 
-            if (configUrl == null) {
-                LOGGER.error("Config file could not be found. Exiting...");
-                return;
-            }
-
-            config = parser.parse(new String(Files.readAllBytes(Paths.get(configUrl.toURI())))).getAsJsonObject();
-        } catch (IOException | URISyntaxException e) {
-            LOGGER.error("Error reading config file", e);
+        if (configStream == null) {
+            LOGGER.error("Config file could not be found. Exiting...");
             return;
         }
+
+        Reader reader = new InputStreamReader(configStream);
+        config = parser.parse(reader).getAsJsonObject();
 
         JsonArray servers = config.getAsJsonArray("servers");
         Type type = new TypeToken<ArrayList<RaftAddress>>(){}.getType();
