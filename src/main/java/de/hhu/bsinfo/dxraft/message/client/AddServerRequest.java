@@ -8,31 +8,31 @@ import de.hhu.bsinfo.dxraft.server.RaftServerContext;
 import de.hhu.bsinfo.dxraft.state.ServerState;
 import de.hhu.bsinfo.dxraft.state.StateMachine;
 
-public class AddServerRequest extends ClientRequest {
+public class AddServerRequest extends AbstractClientRequest {
 
-    private RaftAddress newServer;
+    private RaftAddress m_newServer;
 
-    private transient boolean serverAdded = false;
+    private transient boolean m_serverAdded = false;
 
-    public AddServerRequest(RaftAddress newServer) {
-        this.newServer = newServer;
+    public AddServerRequest(RaftAddress p_newServer) {
+        m_newServer = p_newServer;
     }
 
     public RaftAddress getNewServer() {
-        return newServer;
+        return m_newServer;
     }
 
     @Override
-    public void onAppend(RaftServerContext context, StateMachine stateMachine, ServerState state) {
-        super.onAppend(context, stateMachine, state);
-        if (!serverAdded) {
-            context.addServer(newServer);
-            stateMachine.write(SpecialPaths.CLUSTER_CONFIG_PATH, new ClusterConfigData(context.getRaftServers()));
-            serverAdded = true;
+    public void onAppend(RaftServerContext p_context, StateMachine p_stateMachine, ServerState p_state) {
+        super.onAppend(p_context, p_stateMachine, p_state);
+        if (!m_serverAdded) {
+            p_context.addServer(m_newServer);
+            p_stateMachine.write(SpecialPaths.CLUSTER_CONFIG_PATH, new ClusterConfigData(p_context.getRaftServers()));
+            m_serverAdded = true;
 
-            if (newServer.equals(context.getLocalAddress())) {
+            if (m_newServer.equals(p_context.getLocalAddress())) {
                 // if the server itself is added to the configuration it should actively take part in the cluster
-                state.becomeActive();
+                p_state.becomeActive();
             }
         }
     }
@@ -47,10 +47,10 @@ public class AddServerRequest extends ClientRequest {
     }
 
     @Override
-    public void onRemove(RaftServerContext context, StateMachine stateMachine) {
-        if (serverAdded) {
-            context.removeServer(newServer);
-            serverAdded = false;
+    public void onRemove(RaftServerContext p_context, StateMachine p_stateMachine) {
+        if (m_serverAdded) {
+            p_context.removeServer(m_newServer);
+            m_serverAdded = false;
         }
     }
 }

@@ -25,7 +25,7 @@ class ServerStateSpec extends Specification {
     }
 
     def "test state changes"() {
-        expect: "initial state"
+        expect: "initial m_state"
             state.isFollower()
             state.getCurrentTerm() == 0
         when: "timeout => convert to candidate"

@@ -1,6 +1,5 @@
 package de.hhu.bsinfo.dxraft.log;
 
-import de.hhu.bsinfo.dxraft.context.RaftContext;
 import de.hhu.bsinfo.dxraft.server.RaftServerContext;
 import de.hhu.bsinfo.dxraft.state.ServerState;
 import de.hhu.bsinfo.dxraft.state.StateMachine;
@@ -10,63 +9,65 @@ import java.util.List;
 
 public class InMemoryLog implements LogStorage {
 
-    private RaftServerContext context;
-    private StateMachine stateMachine;
-    private ServerState state;
-    private List<LogEntry> log = new ArrayList<>();
+    private RaftServerContext m_context;
+    private StateMachine m_stateMachine;
+    private ServerState m_state;
+    private List<LogEntry> m_log = new ArrayList<>();
 
-    public InMemoryLog(RaftServerContext context) {
-        this.context = context;
-    }
-
-    public void setStateMachine(StateMachine stateMachine) {
-        this.stateMachine = stateMachine;
-    }
-
-    public void setState(ServerState state) {
-        this.state = state;
+    public InMemoryLog(RaftServerContext p_context) {
+        m_context = p_context;
     }
 
     @Override
-    public void append(LogEntry logEntry) {
-        logEntry.onAppend(context, stateMachine, state);
-        log.add(logEntry);
+    public void setStateMachine(StateMachine p_stateMachine) {
+        m_stateMachine = p_stateMachine;
     }
 
     @Override
-    public LogEntry getEntryByIndex(int index) {
-        return log.get(index);
+    public void setState(ServerState p_state) {
+        m_state = p_state;
+    }
+
+    @Override
+    public void append(LogEntry p_logEntry) {
+        p_logEntry.onAppend(m_context, m_stateMachine, m_state);
+        m_log.add(p_logEntry);
+    }
+
+    @Override
+    public LogEntry getEntryByIndex(int p_index) {
+        return m_log.get(p_index);
     }
 
     @Override
     public int getSize() {
-        return log.size();
+        return m_log.size();
     }
 
     @Override
     public boolean isEmpty() {
-        return log.isEmpty();
+        return m_log.isEmpty();
     }
 
     @Override
-    public boolean contains(LogEntry logEntry) {
-        return log.contains(logEntry);
+    public boolean contains(LogEntry p_logEntry) {
+        return m_log.contains(p_logEntry);
     }
 
     @Override
-    public List<LogEntry> getEntriesByRange(int fromIndex, int toIndex) {
-        return new ArrayList<>(log.subList(fromIndex, toIndex));
+    public List<LogEntry> getEntriesByRange(int p_fromIndex, int p_toIndex) {
+        return new ArrayList<>(m_log.subList(p_fromIndex, p_toIndex));
     }
 
     @Override
-    public void removeEntriesByRange(int fromIndex, int toIndex) {
-        List<LogEntry> sublist = log.subList(fromIndex, toIndex);
-        sublist.forEach(entry -> entry.onRemove(context, stateMachine));
+    public void removeEntriesByRange(int p_fromIndex, int p_toIndex) {
+        List<LogEntry> sublist = m_log.subList(p_fromIndex, p_toIndex);
+        sublist.forEach(entry -> entry.onRemove(m_context, m_stateMachine));
         sublist.clear();
     }
 
     @Override
-    public int indexOf(LogEntry logEntry) {
-        return log.indexOf(logEntry);
+    public int indexOf(LogEntry p_logEntry) {
+        return m_log.indexOf(p_logEntry);
     }
 }

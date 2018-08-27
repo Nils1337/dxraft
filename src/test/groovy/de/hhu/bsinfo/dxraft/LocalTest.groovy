@@ -19,7 +19,7 @@ class LocalTest extends Specification {
     def serverAddresses = []
     def client
 
-    def data = new StringData("data")
+    def data = new StringData("m_data")
     def data2 = new StringData("data2")
     def data3 = new StringData("data3")
 

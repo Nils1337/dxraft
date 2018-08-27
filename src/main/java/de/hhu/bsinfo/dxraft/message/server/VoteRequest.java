@@ -2,27 +2,27 @@ package de.hhu.bsinfo.dxraft.message.server;
 
 import de.hhu.bsinfo.dxraft.server.ServerMessageReceiver;
 
-public class VoteRequest extends ServerMessage {
-    private int lastLogIndex;
+public class VoteRequest extends AbstractServerMessage {
+    private int m_lastLogIndex;
 
-    public VoteRequest(int receiverId, int term, int lastLogIndex, int lastLogTerm) {
-        super(receiverId, term);
-        this.lastLogIndex = lastLogIndex;
-        this.lastLogTerm = lastLogTerm;
+    public VoteRequest(int p_receiverId, int p_term, int p_lastLogIndex, int p_lastLogTerm) {
+        super(p_receiverId, p_term);
+        m_lastLogIndex = p_lastLogIndex;
+        m_lastLogTerm = p_lastLogTerm;
     }
 
-    private int lastLogTerm;
+    private int m_lastLogTerm;
 
     public int getLastLogIndex() {
-        return lastLogIndex;
+        return m_lastLogIndex;
     }
 
     public int getLastLogTerm() {
-        return lastLogTerm;
+        return m_lastLogTerm;
     }
 
     @Override
-    public void deliverMessage(ServerMessageReceiver messageReceiver) {
-        messageReceiver.processVoteRequest(this);
+    public void deliverMessage(ServerMessageReceiver p_messageReceiver) {
+        p_messageReceiver.processVoteRequest(this);
     }
 }

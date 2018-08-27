@@ -3,14 +3,14 @@ package de.hhu.bsinfo.dxraft.data;
 import java.util.Objects;
 
 public class ShortData implements RaftData {
-    private short value;
+    private short m_value;
 
     public short getData() {
-        return value;
+        return m_value;
     }
 
-    public ShortData(short value) {
-        this.value = value;
+    public ShortData(short p_value) {
+        this.m_value = p_value;
     }
 
     @Override
@@ -22,12 +22,12 @@ public class ShortData implements RaftData {
             return false;
         }
         ShortData shortData = (ShortData) o;
-        return value == shortData.value;
+        return m_value == shortData.m_value;
     }
 
     @Override
     public int hashCode() {
 
-        return Objects.hash(value);
+        return Objects.hash(m_value);
     }
 }

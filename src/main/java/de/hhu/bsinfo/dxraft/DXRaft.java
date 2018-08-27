@@ -35,7 +35,7 @@ public final class DXRaft {
 
     private DXRaft() {}
 
-    public static void main(String[] args) {
+    public static void main(String[] p_args) {
         String idString = System.getProperty("server.id");
 
         if (idString == null) {

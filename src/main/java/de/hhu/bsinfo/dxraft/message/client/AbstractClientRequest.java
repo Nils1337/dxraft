@@ -12,20 +12,20 @@ import de.hhu.bsinfo.dxraft.state.StateMachine;
 import java.util.Objects;
 import java.util.UUID;
 
-public abstract class ClientRequest extends RaftMessage implements MessageDeliverer, LogEntry {
+public abstract class AbstractClientRequest extends RaftMessage implements MessageDeliverer, LogEntry {
 
-    private UUID id = UUID.randomUUID();
+    private UUID m_id = UUID.randomUUID();
 
-    private int term = -1;
-    private transient boolean committed = false;
+    private int m_term = -1;
+    private transient boolean m_committed = false;
 
     @Override
-    public void deliverMessage(ServerMessageReceiver messageReceiver) {
-        messageReceiver.processClientRequest(this);
+    public void deliverMessage(ServerMessageReceiver p_messageReceiver) {
+        p_messageReceiver.processClientRequest(this);
     }
 
     public UUID getId() {
-        return id;
+        return m_id;
     }
 
     public boolean isReadRequest() {
@@ -46,38 +46,38 @@ public abstract class ClientRequest extends RaftMessage implements MessageDelive
 
     @Override
     public int getTerm() {
-        return term;
+        return m_term;
     }
 
-    public void setTerm(int term) {
-        this.term = term;
+    public void setTerm(int p_term) {
+        m_term = p_term;
     }
 
     @Override
     public boolean isCommitted() {
-        return committed;
+        return m_committed;
     }
 
     @Override
-    public void updateClientRequest(ClientRequest request) {
-        setSenderAddress(request.getSenderAddress());
+    public void updateClientRequest(AbstractClientRequest p_request) {
+        setSenderAddress(p_request.getSenderAddress());
     }
 
     @Override
-    public void onCommit(RaftServerContext context, StateMachine stateMachine, ServerState state) {
-        committed = true;
+    public void onCommit(RaftServerContext p_context, StateMachine p_stateMachine, ServerState p_state) {
+        m_committed = true;
     }
 
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
-        ClientRequest request = (ClientRequest) o;
-        return Objects.equals(id, request.id);
+        AbstractClientRequest request = (AbstractClientRequest) o;
+        return Objects.equals(m_id, request.m_id);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(id);
+        return Objects.hash(m_id);
     }
 }

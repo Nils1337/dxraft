@@ -9,52 +9,52 @@ import de.hhu.bsinfo.dxraft.server.RaftServerContext;
 import de.hhu.bsinfo.dxraft.state.ServerState;
 import de.hhu.bsinfo.dxraft.state.StateMachine;
 
-public class WriteListRequest extends ClientRequest {
+public class WriteListRequest extends AbstractClientRequest {
 
-    private String name;
-    private List<RaftData> value;
-    private boolean overwrite = true;
+    private String m_name;
+    private List<RaftData> m_value;
+    private boolean m_overwrite = true;
 
-    private transient boolean success;
+    private transient boolean m_success;
 
-    public WriteListRequest(String name, List<RaftData> value) {
-        this.name = name;
-        this.value = value;
+    public WriteListRequest(String p_name, List<RaftData> p_value) {
+        m_name = p_name;
+        m_value = p_value;
     }
 
-    public WriteListRequest(String path, List<RaftData> value, boolean overwrite) {
-        this.name = path;
-        this.value = value;
-        this.overwrite = overwrite;
+    public WriteListRequest(String p_path, List<RaftData> p_value, boolean p_overwrite) {
+        m_name = p_path;
+        m_value = p_value;
+        m_overwrite = p_overwrite;
     }
 
     public String getName() {
-        return name;
+        return m_name;
     }
 
     public List<RaftData> getValue() {
-        return value;
+        return m_value;
     }
 
     @Override
-    public void onCommit(RaftServerContext context, StateMachine stateMachine, ServerState state) {
+    public void onCommit(RaftServerContext p_context, StateMachine p_stateMachine, ServerState p_state) {
         if (!isCommitted()) {
-            List<RaftData> data = stateMachine.readList(name);
-            if (overwrite || data == null) {
-                stateMachine.writeList(name, value);
-                success = true;
+            List<RaftData> data = p_stateMachine.readList(m_name);
+            if (m_overwrite || data == null) {
+                p_stateMachine.writeList(m_name, m_value);
+                m_success = true;
             } else {
-                success = false;
+                m_success = false;
             }
         }
-        super.onCommit(context, stateMachine, state);
+        super.onCommit(p_context, p_stateMachine, p_state);
     }
 
     @Override
     public ClientResponse buildResponse() {
         RaftAddress address = getSenderAddress();
         if (isCommitted() && address != null) {
-            return new ClientResponse(getSenderAddress(), getId(), success);
+            return new ClientResponse(getSenderAddress(), getId(), m_success);
         }
         return null;
     }

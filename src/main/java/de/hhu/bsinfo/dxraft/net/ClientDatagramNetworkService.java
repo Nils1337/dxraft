@@ -16,30 +16,29 @@ import org.apache.logging.log4j.Logger;
 
 import de.hhu.bsinfo.dxraft.context.RaftAddress;
 import de.hhu.bsinfo.dxraft.message.RaftMessage;
-import de.hhu.bsinfo.dxraft.message.client.ClientRequest;
-import de.hhu.bsinfo.dxraft.message.server.ClientRedirection;
+import de.hhu.bsinfo.dxraft.message.client.AbstractClientRequest;
 import de.hhu.bsinfo.dxraft.message.server.ClientResponse;
 
 public class ClientDatagramNetworkService implements ClientNetworkService {
     private static final Logger LOGGER = LogManager.getLogger();
     private static final int MAX_MESSAGE_SIZE = 65535;
 
-    private DatagramSocket clientSocket;
+    private DatagramSocket m_clientSocket;
 
     public ClientDatagramNetworkService() {
         try {
-            clientSocket = new DatagramSocket();
+            m_clientSocket = new DatagramSocket();
         } catch (SocketException e) {
             LOGGER.error("Error opening socket", e);
         }
     }
 
     @Override
-    public RaftMessage sendRequest(ClientRequest request) {
-        DatagramPacket packet = preparePacket(request);
+    public RaftMessage sendRequest(AbstractClientRequest p_request) {
+        DatagramPacket packet = preparePacket(p_request);
         if (packet != null) {
             try {
-                clientSocket.send(packet);
+                m_clientSocket.send(packet);
 
                 boolean received = false;
                 RaftMessage msg = null;
@@ -53,7 +52,7 @@ public class ClientDatagramNetworkService implements ClientNetworkService {
                     // ignore other responses for now
                     if (msg instanceof ClientResponse) {
                         ClientResponse response = (ClientResponse) msg;
-                        if (!response.getRequestId().equals(request.getId())) {
+                        if (!response.getRequestId().equals(p_request.getId())) {
                             LOGGER.debug("received response for old request, waiting for response for current request");
                             received = false;
                         }
@@ -69,9 +68,10 @@ public class ClientDatagramNetworkService implements ClientNetworkService {
         return null;
     }
 
+    @Override
     public void close() {
-        if (clientSocket != null) {
-            clientSocket.close();
+        if (m_clientSocket != null) {
+            m_clientSocket.close();
         }
     }
 
@@ -79,8 +79,8 @@ public class ClientDatagramNetworkService implements ClientNetworkService {
         try {
             byte[] buf = new byte[MAX_MESSAGE_SIZE];
             DatagramPacket msg = new DatagramPacket(buf, buf.length);
-            clientSocket.setSoTimeout(1000);
-            clientSocket.receive(msg);
+            m_clientSocket.setSoTimeout(1000);
+            m_clientSocket.receive(msg);
             ObjectInputStream objIn = new ObjectInputStream(new ByteArrayInputStream(msg.getData()));
             return (RaftMessage) objIn.readObject();
         } catch (IOException | ClassNotFoundException e) {
@@ -89,18 +89,18 @@ public class ClientDatagramNetworkService implements ClientNetworkService {
         return null;
     }
 
-    private DatagramPacket preparePacket(RaftMessage message) {
+    private DatagramPacket preparePacket(RaftMessage p_message) {
         try (
             ByteArrayOutputStream out = new ByteArrayOutputStream();
             ObjectOutputStream objOut = new ObjectOutputStream(out)
         )
         {
-            objOut.writeObject(message);
+            objOut.writeObject(p_message);
             byte[] msg = out.toByteArray();
-            RaftAddress receiverAddress = message.getReceiverAddress();
+            RaftAddress receiverAddress = p_message.getReceiverAddress();
 
             if (receiverAddress == null) {
-                LOGGER.error("Receiver of message " + message + " could not be determined");
+                LOGGER.error("Receiver of message {} could not be determined", p_message);
                 return null;
             }
 

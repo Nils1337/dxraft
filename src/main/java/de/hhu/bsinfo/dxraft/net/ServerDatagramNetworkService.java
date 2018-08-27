@@ -10,7 +10,7 @@ import org.apache.logging.log4j.Logger;
 import java.io.*;
 import java.net.*;
 
-public class ServerDatagramNetworkService extends ServerNetworkService {
+public class ServerDatagramNetworkService extends AbstractServerNetworkService {
     private static final Logger LOGGER = LogManager.getLogger();
 
     private static final int MAX_MESSAGE_SIZE = 65535;

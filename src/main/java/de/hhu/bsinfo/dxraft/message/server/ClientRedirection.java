@@ -4,14 +4,14 @@ import de.hhu.bsinfo.dxraft.context.RaftAddress;
 import de.hhu.bsinfo.dxraft.message.RaftMessage;
 
 public class ClientRedirection extends RaftMessage {
-    private RaftAddress leaderAddress;
+    private RaftAddress m_leaderAddress;
 
-    public ClientRedirection(RaftAddress receiverAddress, RaftAddress leaderAddress) {
-        super(receiverAddress);
-        this.leaderAddress = leaderAddress;
+    public ClientRedirection(RaftAddress p_receiverAddress, RaftAddress p_leaderAddress) {
+        super(p_receiverAddress);
+        m_leaderAddress = p_leaderAddress;
     }
 
     public RaftAddress getLeaderAddress() {
-        return leaderAddress;
+        return m_leaderAddress;
     }
 }

@@ -6,13 +6,13 @@ import de.hhu.bsinfo.dxraft.log.Log
 import de.hhu.bsinfo.dxraft.message.server.AppendEntriesRequest
 import de.hhu.bsinfo.dxraft.message.server.AppendEntriesResponse
 import de.hhu.bsinfo.dxraft.message.server.ClientRedirection
-import de.hhu.bsinfo.dxraft.message.client.ClientRequest
+import de.hhu.bsinfo.dxraft.message.client.AbstractClientRequest
 import de.hhu.bsinfo.dxraft.message.server.ClientResponse
 import de.hhu.bsinfo.dxraft.message.client.DeleteRequest
 import de.hhu.bsinfo.dxraft.message.server.VoteRequest
 import de.hhu.bsinfo.dxraft.message.server.VoteResponse
 import de.hhu.bsinfo.dxraft.message.client.WriteRequest
-import de.hhu.bsinfo.dxraft.net.ServerNetworkService
+import de.hhu.bsinfo.dxraft.net.AbstractServerNetworkService
 
 import de.hhu.bsinfo.dxraft.log.LogEntry
 import de.hhu.bsinfo.dxraft.state.ServerState
@@ -23,7 +23,7 @@ import spock.lang.Unroll
 class RaftServerSpec extends Specification {
 
     def context = Mock(RaftServerContext)
-    def netService = Mock(ServerNetworkService)
+    def netService = Mock(AbstractServerNetworkService)
     def log = Mock(Log)
     def timer = Mock(RaftTimer)
     def state = Mock(ServerState)
@@ -105,7 +105,7 @@ class RaftServerSpec extends Specification {
         when:
             server.processVoteResponse(voteResponse)
 
-        then: "should update votes map but not convert state"
+        then: "should update votes map but not convert m_state"
             state.isCandidate() >> true
             voteResponse.isVoteGranted() >> false
             voteResponse.getSenderId() >> 1
@@ -308,7 +308,7 @@ class RaftServerSpec extends Specification {
 
     def "test redirection"() {
         given:
-            def request = Mock(ClientRequest)
+            def request = Mock(AbstractClientRequest)
 
         when:
             server.processClientRequest(request)
@@ -327,7 +327,7 @@ class RaftServerSpec extends Specification {
 //            request.isReadRequest() >> true
 //
 //            def response = Mock(ClientResponse)
-//            state.isLeader() >> true
+//            m_state.isLeader() >> true
 //
 //        when:
 //            server.processClientRequest(request)

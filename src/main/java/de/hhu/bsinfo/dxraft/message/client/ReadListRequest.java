@@ -9,31 +9,31 @@ import de.hhu.bsinfo.dxraft.server.RaftServerContext;
 import de.hhu.bsinfo.dxraft.state.ServerState;
 import de.hhu.bsinfo.dxraft.state.StateMachine;
 
-public class ReadListRequest extends ClientRequest {
-    private String name;
-    private List<RaftData> value;
+public class ReadListRequest extends AbstractClientRequest {
+    private String m_name;
+    private List<RaftData> m_value;
 
-    public ReadListRequest(String name) {
-        this.name = name;
+    public ReadListRequest(String p_name) {
+        this.m_name = p_name;
     }
 
     public String getName() {
-        return name;
+        return m_name;
     }
 
     @Override
-    public void onCommit(RaftServerContext context, StateMachine stateMachine, ServerState state) {
+    public void onCommit(RaftServerContext p_context, StateMachine p_stateMachine, ServerState p_state) {
         if (!isCommitted()) {
-            value = stateMachine.readList(name);
+            m_value = p_stateMachine.readList(m_name);
         }
-        super.onCommit(context, stateMachine, state);
+        super.onCommit(p_context, p_stateMachine, p_state);
     }
 
     @Override
     public ClientResponse buildResponse() {
         RaftAddress address = getSenderAddress();
         if (isCommitted() && address != null) {
-            return new ClientResponse(getSenderAddress(), getId(), value);
+            return new ClientResponse(getSenderAddress(), getId(), m_value);
         }
         return null;
     }

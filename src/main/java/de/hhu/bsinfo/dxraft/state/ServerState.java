@@ -4,7 +4,7 @@ import de.hhu.bsinfo.dxraft.context.RaftAddress;
 import de.hhu.bsinfo.dxraft.log.Log;
 import de.hhu.bsinfo.dxraft.log.LogEntry;
 import de.hhu.bsinfo.dxraft.message.client.AddServerRequest;
-import de.hhu.bsinfo.dxraft.message.client.ClientRequest;
+import de.hhu.bsinfo.dxraft.message.client.AbstractClientRequest;
 import de.hhu.bsinfo.dxraft.message.client.RemoveServerRequest;
 import de.hhu.bsinfo.dxraft.server.RaftServerContext;
 import de.hhu.bsinfo.dxraft.timer.RaftTimer;
@@ -24,12 +24,12 @@ public class ServerState {
         FOLLOWER, CANDIDATE, LEADER
     }
 
-    private State state = State.FOLLOWER;
-    private RaftTimer timer;
-    private RaftServerContext context;
+    private State m_state = State.FOLLOWER;
+    private RaftTimer m_timer;
+    private RaftServerContext m_context;
 
-    public ServerState(RaftServerContext context) {
-        this.context = context;
+    public ServerState(RaftServerContext p_context) {
+        m_context = p_context;
     }
 
     ////////////////
@@ -38,9 +38,9 @@ public class ServerState {
 
     // Current term this server is in
     // TODO persist
-    private int currentTerm = 0;
+    private int m_currentTerm = 0;
 
-    private Log log;
+    private Log m_log;
 
     //////////////////
     //Follower state//
@@ -48,42 +48,43 @@ public class ServerState {
 
     // Vote the server gave in its current term
     // TODO persist
-    private int votedFor = RaftAddress.INVALID_ID;
+    private int m_votedFor = RaftAddress.INVALID_ID;
 
     // Server that this server believes is the current leader
-    private int currentLeader = RaftAddress.INVALID_ID;
+    private int m_currentLeader = RaftAddress.INVALID_ID;
 
     // in idle state, timer is not started
     // -> server still answers vote and append entries request but does not try to become leader
-    private boolean idle = true;
+    private boolean m_idle = true;
 
     ///////////////////
     //Candidate state//
     ///////////////////
 
     // map for the received votes
-    private Map<Integer, Boolean> votesMap = new HashMap<Integer, Boolean>();
+    private Map<Integer, Boolean> m_votesMap = new HashMap<Integer, Boolean>();
 
     /**
      * The total amount of granted votes including the vote of the server itself
      */
     public long getVotesCount() {
-        long votes = votesMap.values().stream().filter((value) -> value).count();
+        long votes = m_votesMap.values().stream().filter(value -> value).count();
 
         // Only count the vote for itself if the server is part of its own configuration.
         // The removal of the server from the configuration might be pending but not committed, during which the server
         // should operate normally but should not count its own vote
-        if (context.getRaftServers().contains(context.getLocalAddress())) {
+        if (m_context.getRaftServers().contains(m_context.getLocalAddress())) {
             votes++;
         }
         return  votes;
     }
 
-    public void updateVote(int id, boolean voteGranted) {
-        if (state != State.CANDIDATE) {
-            throw new IllegalStateException("Server could not update vote map because state is " + state + " but should be CANDIDATE!");
+    public void updateVote(int p_id, boolean p_voteGranted) {
+        if (m_state != State.CANDIDATE) {
+            throw new IllegalStateException("Server could not update vote map because state is "
+                + m_state + " but should be CANDIDATE!");
         }
-        votesMap.put(id, voteGranted);
+        m_votesMap.put(p_id, p_voteGranted);
     }
 
     ///////////////////
@@ -91,88 +92,92 @@ public class ServerState {
     ///////////////////
 
     // save pending configuration requests because they are not allowed to be handled concurrently
-    private List<ClientRequest> pendingConfigChangeRequests = new ArrayList<>();
+    private List<AbstractClientRequest> m_pendingConfigChangeRequests = new ArrayList<>();
 
-    public void addPendingConfigChangeRequest(ClientRequest request) {
-        pendingConfigChangeRequests.add(request);
+    public void addPendingConfigChangeRequest(AbstractClientRequest p_request) {
+        m_pendingConfigChangeRequests.add(p_request);
     }
 
-    public ClientRequest popPendingConfigChangeRequest() {
-        if (pendingConfigChangeRequests.size() > 0) {
-            return pendingConfigChangeRequests.remove(0);
+    public AbstractClientRequest popPendingConfigChangeRequest() {
+        if (!m_pendingConfigChangeRequests.isEmpty()) {
+            return m_pendingConfigChangeRequests.remove(0);
         }
         return null;
     }
 
-    public ClientRequest getPendingConfigChangeRequest() {
-        if (pendingConfigChangeRequests.size() > 0) {
-            return pendingConfigChangeRequests.get(0);
+    public AbstractClientRequest getPendingConfigChangeRequest() {
+        if (!m_pendingConfigChangeRequests.isEmpty()) {
+            return m_pendingConfigChangeRequests.get(0);
         }
         return null;
     }
 
     public boolean configChangeRequestisPending() {
-        return pendingConfigChangeRequests.size() > 1;
+        return m_pendingConfigChangeRequests.size() > 1;
     }
 
     private void resetPendingConfigChanges() {
-        pendingConfigChangeRequests.clear();
+        m_pendingConfigChangeRequests.clear();
 
-        // if becoming leader, check if there is an uncommitted (pending) configuration change in the log and add it to the pending list
-        for (LogEntry logEntry : log.getUncommittedEntries()) {
+        // if becoming leader, check if there is an uncommitted (pending)
+        // configuration change in the log and add it to the pending list
+        for (LogEntry logEntry : m_log.getUncommittedEntries()) {
             if (logEntry instanceof AddServerRequest || logEntry instanceof RemoveServerRequest) {
-                ClientRequest request = (ClientRequest) logEntry;
-                pendingConfigChangeRequests.add(request);
+                AbstractClientRequest request = (AbstractClientRequest) logEntry;
+                m_pendingConfigChangeRequests.add(request);
             }
         }
     }
 
     // map for the next indices to send to each server
-    private Map<Integer, Integer> nextIndexMap = new HashMap<Integer, Integer>();
+    private Map<Integer, Integer> m_nextIndexMap = new HashMap<Integer, Integer>();
 
     private void resetNextIndices() {
-        for (Integer id: context.getOtherServerIds()) {
-            nextIndexMap.put(id, log.getLastIndex() + 1);
+        for (Integer id: m_context.getOtherServerIds()) {
+            m_nextIndexMap.put(id, m_log.getLastIndex() + 1);
         }
     }
 
-    public void decrementNextIndex(int id) {
-        if (state != State.LEADER) {
-            throw new IllegalStateException("Server could not update next index because state is " + state + " but should be LEADER!");
+    public void decrementNextIndex(int p_id) {
+        if (m_state != State.LEADER) {
+            throw new IllegalStateException("Server could not update next index because state is "
+                + m_state + " but should be LEADER!");
         }
-        nextIndexMap.computeIfPresent(id, (k, v) -> v > 0 ? v - 1 : v);
+        m_nextIndexMap.computeIfPresent(p_id, (k, v) -> v > 0 ? v - 1 : v);
     }
 
-    public void updateNextIndex(int id, int index) {
-        if (state != State.LEADER) {
-            throw new IllegalStateException("Server could not update next index because state is " + state + " but should be LEADER!");
+    public void updateNextIndex(int p_id, int p_index) {
+        if (m_state != State.LEADER) {
+            throw new IllegalStateException("Server could not update next index because state is "
+                + m_state + " but should be LEADER!");
         }
-        nextIndexMap.put(id, index);
+        m_nextIndexMap.put(p_id, p_index);
     }
 
-    public int getNextIndex(int id) {
-        Integer index = nextIndexMap.get(id);
+    public int getNextIndex(int p_id) {
+        Integer index = m_nextIndexMap.get(p_id);
         return index == null ? 0 : index;
     }
 
     // map for the indices that match with the local log
-    private Map<Integer, Integer> matchIndexMap = new HashMap<Integer, Integer>();
+    private Map<Integer, Integer> m_matchIndexMap = new HashMap<Integer, Integer>();
 
     private void resetMatchIndices() {
-        for (Integer id: context.getOtherServerIds()) {
-            nextIndexMap.put(id, 0);
+        for (Integer id: m_context.getOtherServerIds()) {
+            m_nextIndexMap.put(id, 0);
         }
     }
 
-    public void updateMatchIndex(int id, int index) {
-        if (state != State.LEADER) {
-            throw new IllegalStateException("Server could not update match index because state is " + state + " but should be LEADER!");
+    public void updateMatchIndex(int p_id, int p_index) {
+        if (m_state != State.LEADER) {
+            throw new IllegalStateException("Server could not update match index because state is "
+                + m_state + " but should be LEADER!");
         }
-        matchIndexMap.put(id, index);
+        m_matchIndexMap.put(p_id, p_index);
     }
 
-    public int getMatchIndex(int id) {
-        Integer index = matchIndexMap.get(id);
+    public int getMatchIndex(int p_id) {
+        Integer index = m_matchIndexMap.get(p_id);
         return index == null ? -1 : index;
     }
 
@@ -182,14 +187,17 @@ public class ServerState {
     ///////////////////
 
     /**
-     * Checks the matchIndexes of the followers to find a higher index where the logs of a majority of the servers match and
-     * the term is the current term of the leader and returns this index. Returns the current onCommit index if there is no such index.
+     * Checks the matchIndexes of the followers to find a higher index where the logs of a majority of the servers match
+     * and the term is the current term of the leader and returns this index.
+     * @return the index or the current commit index if there is no such index.
      */
     public int getNewCommitIndex() {
-        int newCommitIndex = log.getCommitIndex();
-        for (int i = log.getCommitIndex() + 1; i <= log.getLastIndex(); i++) {
+        int newCommitIndex = m_log.getCommitIndex();
+        for (int i = m_log.getCommitIndex() + 1; i <= m_log.getLastIndex(); i++) {
             final int index = i;
-            if (matchIndexMap.values().stream().filter(matchIndex -> matchIndex >= index).count() + 1 > context.getServerCount()/2.0 && log.getTermByIndex(i) == currentTerm) {
+            if (m_matchIndexMap.values().stream().filter(matchIndex -> matchIndex >= index).count() + 1
+                > m_context.getServerCount()/2.0
+                && m_log.getTermByIndex(i) == m_currentTerm) {
                 newCommitIndex = index;
             }
         }
@@ -198,50 +206,52 @@ public class ServerState {
 
 
     public boolean isFollower() {
-        return state == State.FOLLOWER;
+        return m_state == State.FOLLOWER;
     }
 
     public boolean isCandidate() {
-        return state == State.CANDIDATE;
+        return m_state == State.CANDIDATE;
     }
 
     public boolean isLeader() {
-        return state == State.LEADER;
+        return m_state == State.LEADER;
     }
 
 
     public State getState() {
-        return state;
+        return m_state;
     }
 
     public int getCurrentTerm() {
-        return currentTerm;
+        return m_currentTerm;
     }
 
-    public void updateLeader(int leaderId) {
-        if (state != State.FOLLOWER) {
-            throw new IllegalStateException("Server could not set leader because state is " + state + " but should be FOLLOWER!");
+    public void updateLeader(int p_leaderId) {
+        if (m_state != State.FOLLOWER) {
+            throw new IllegalStateException("Server could not set leader because state is "
+                + m_state + " but should be FOLLOWER!");
         }
-        currentLeader = leaderId;
+        m_currentLeader = p_leaderId;
     }
 
     public int getCurrentLeader() {
-        return currentLeader;
+        return m_currentLeader;
     }
 
-    public void updateVote(int votedFor) {
-        if (state != State.FOLLOWER) {
-            throw new IllegalStateException("Server could not set vote because state is " + state + " but should be FOLLOWER!");
+    public void updateVote(int p_votedFor) {
+        if (m_state != State.FOLLOWER) {
+            throw new IllegalStateException("Server could not set vote because state is "
+                + m_state + " but should be FOLLOWER!");
         }
-        this.votedFor = votedFor;
+        m_votedFor = p_votedFor;
 
-        if (!idle) {
-            timer.reset(state);
+        if (!m_idle) {
+            m_timer.reset(m_state);
         }
     }
 
     public int getVotedFor() {
-        return votedFor;
+        return m_votedFor;
     }
 
 
@@ -249,81 +259,87 @@ public class ServerState {
      * Changes the state to Leader. This happens when the server got a quorum of servers that voted for it.
      */
     public void convertStateToLeader() {
-        if (state != State.CANDIDATE) {
-            throw new IllegalStateException("Server could not convert to leader because state is " + state + " but should be CANDIDATE!");
+        if (m_state != State.CANDIDATE) {
+            throw new IllegalStateException("Server could not convert to leader because state is "
+                + m_state + " but should be CANDIDATE!");
         }
 
-        LOGGER.info("Server is now leader in term {}",  currentTerm);
+        LOGGER.info("Server is now leader in term {}", m_currentTerm);
 
-        state = State.LEADER;
+        m_state = State.LEADER;
 
         resetNextIndices();
         resetMatchIndices();
         resetPendingConfigChanges();
 
-        timer.reset(state);
+        m_timer.reset(m_state);
     }
 
     public void resetStateAsLeader() {
-        if (state != State.LEADER) {
-            throw new IllegalStateException("Server could not be reset because state is " + state + " but should be LEADER!");
+        if (m_state != State.LEADER) {
+            throw new IllegalStateException("Server could not be reset because state is "
+                + m_state + " but should be LEADER!");
         }
 
-        timer.reset(state);
+        m_timer.reset(m_state);
     }
 
     /**
      * Changes the state to Follower. This happens when a message with a higher term is received.
      */
     public void convertStateToFollower() {
-        if (state == State.FOLLOWER) {
-            throw new IllegalStateException("Server could not convert to follower because state is " + state + " but should be CANDIDATE or LEADER!");
+        if (m_state == State.FOLLOWER) {
+            throw new IllegalStateException("Server could not convert to follower because state is "
+                + m_state + " but should be CANDIDATE or LEADER!");
         }
 
-        state = State.FOLLOWER;
-        votedFor = RaftAddress.INVALID_ID;
-        if (!idle) {
-            timer.reset(state);
+        m_state = State.FOLLOWER;
+        m_votedFor = RaftAddress.INVALID_ID;
+        if (!m_idle) {
+            m_timer.reset(m_state);
         }
     }
 
     public void resetStateAsFollower() {
-        if (state != State.FOLLOWER) {
-            throw new IllegalStateException("Server could not be reset because state is " + state + " but should be FOLLOWER!");
+        if (m_state != State.FOLLOWER) {
+            throw new IllegalStateException("Server could not be reset because state is "
+                + m_state + " but should be FOLLOWER!");
         }
 
-        timer.reset(state);
+        m_timer.reset(m_state);
     }
 
     /**
      * Changes the state to Candidate. This happens when the server times out as Follower.
      */
     public void convertStateToCandidate() {
-        if (state != State.FOLLOWER) {
-            throw new IllegalStateException("Server could not convert to candidate because state is " + state + " but should be FOLLOWER!");
+        if (m_state != State.FOLLOWER) {
+            throw new IllegalStateException("Server could not convert to candidate because state is "
+                + m_state + " but should be FOLLOWER!");
         }
 
         LOGGER.info("Starting election...");
-        state = State.CANDIDATE;
+        m_state = State.CANDIDATE;
         resetStateAsCandidate();
     }
 
     public void resetStateAsCandidate() {
-        if (state != State.CANDIDATE) {
-            throw new IllegalStateException("Server could not be reset because state is " + state + " but should be CANDIDATE!");
+        if (m_state != State.CANDIDATE) {
+            throw new IllegalStateException("Server could not be reset because state is "
+                + m_state + " but should be CANDIDATE!");
         }
 
-        currentTerm++;
-        currentLeader = RaftAddress.INVALID_ID;
-        votesMap.clear();
-        votedFor = context.getLocalId();
-        timer.reset(state);
+        m_currentTerm++;
+        m_currentLeader = RaftAddress.INVALID_ID;
+        m_votesMap.clear();
+        m_votedFor = m_context.getLocalId();
+        m_timer.reset(m_state);
     }
 
     public void becomeIdle() {
-        timer.cancel();
-        idle = true;
-        if (state != State.FOLLOWER) {
+        m_timer.cancel();
+        m_idle = true;
+        if (m_state != State.FOLLOWER) {
             convertStateToFollower();
         }
 
@@ -331,50 +347,49 @@ public class ServerState {
     }
 
     public void becomeActive() {
-        idle = false;
-        timer.reset(state);
+        m_idle = false;
+        m_timer.reset(m_state);
 
         LOGGER.info("Server is now active");
     }
 
     public boolean isIdle() {
-        return idle;
+        return m_idle;
     }
 
     /**
-     * Checks if the term of the message is higher than the local term. If this is the case, state is changed to follower.
-     * @param term
+     * Updates the current term to a new term. Converts state to follower.
      */
-    public void updateTerm(int term) {
-        if (term < currentTerm) {
+    public void updateTerm(int p_term) {
+        if (p_term < m_currentTerm) {
             throw new IllegalArgumentException("Decreasing the term must never happen!");
         }
 
         // if server receives message with higher term it has to convert to follower
         // if it already is a follower, only reset the timer and clear the current vote
-        if (state != State.FOLLOWER) {
-            LOGGER.debug("Reverting state to follower because received message with higher term {}", term);
+        if (m_state != State.FOLLOWER) {
+            LOGGER.debug("Reverting state to follower because received message with higher term {}", p_term);
             convertStateToFollower();
         } else {
             resetStateAsFollower();
         }
-        currentTerm = term;
-        currentLeader = RaftAddress.INVALID_ID;
-        votedFor = RaftAddress.INVALID_ID;
+        m_currentTerm = p_term;
+        m_currentLeader = RaftAddress.INVALID_ID;
+        m_votedFor = RaftAddress.INVALID_ID;
     }
 
     /**
      * Setter only for unit tests
      */
-    public void setState(State state) {
-        this.state = state;
+    public void setState(State p_state) {
+        m_state = p_state;
     }
 
-    public void setTimer(RaftTimer timer) {
-        this.timer = timer;
+    public void setTimer(RaftTimer p_timer) {
+        m_timer = p_timer;
     }
 
-    public void setLog(Log log) {
-        this.log = log;
+    public void setLog(Log p_log) {
+        m_log = p_log;
     }
 }

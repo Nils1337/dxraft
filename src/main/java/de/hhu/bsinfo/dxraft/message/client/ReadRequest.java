@@ -10,37 +10,37 @@ import de.hhu.bsinfo.dxraft.server.RaftServerContext;
 import de.hhu.bsinfo.dxraft.state.ServerState;
 import de.hhu.bsinfo.dxraft.state.StateMachine;
 
-public class ReadRequest extends ClientRequest {
-    private String name;
-    private RaftData value;
+public class ReadRequest extends AbstractClientRequest {
+    private String m_name;
+    private RaftData m_value;
 
-    public ReadRequest(String name) {
-        this.name = name;
+    public ReadRequest(String p_name) {
+        m_name = p_name;
     }
 
     public String getName() {
-        return name;
+        return m_name;
     }
 
     @Override
-    public void onCommit(RaftServerContext context, StateMachine stateMachine, ServerState state) {
+    public void onCommit(RaftServerContext p_context, StateMachine p_stateMachine, ServerState p_state) {
         if (!isCommitted()) {
-            if (name.equals(SpecialPaths.LEADER_PATH)) {
-                value = new ServerData(context.getLocalAddress());
-            } else if (name.equals(SpecialPaths.CLUSTER_CONFIG_PATH)) {
-                value = new ClusterConfigData(context.getRaftServers());
+            if (m_name.equals(SpecialPaths.LEADER_PATH)) {
+                m_value = new ServerData(p_context.getLocalAddress());
+            } else if (m_name.equals(SpecialPaths.CLUSTER_CONFIG_PATH)) {
+                m_value = new ClusterConfigData(p_context.getRaftServers());
             } else {
-                value = stateMachine.read(name);
+                m_value = p_stateMachine.read(m_name);
             }
         }
-        super.onCommit(context, stateMachine, state);
+        super.onCommit(p_context, p_stateMachine, p_state);
     }
 
     @Override
     public ClientResponse buildResponse() {
         RaftAddress address = getSenderAddress();
         if (isCommitted() && address != null) {
-            return new ClientResponse(getSenderAddress(), getId(), value);
+            return new ClientResponse(getSenderAddress(), getId(), m_value);
         }
         return null;
     }

@@ -3,46 +3,44 @@ package de.hhu.bsinfo.dxraft.context;
 import java.io.Serializable;
 import java.util.Objects;
 
-import com.google.gson.JsonElement;
-
 public class RaftAddress implements Serializable {
     public static final int INVALID_ID = -1;
 
-    private int id;
-    private String ip;
-    private int port = -1;
+    private int m_id;
+    private String m_ip;
+    private int m_port = -1;
 
-    public RaftAddress(int id, String ip, int port) {
-        this.id = id;
-        this.ip = ip;
-        this.port = port;
+    public RaftAddress(int p_id, String p_ip, int p_port) {
+        m_id = p_id;
+        m_ip = p_ip;
+        m_port = p_port;
     }
 
-    public RaftAddress(String ip, int port) {
-        this.ip = ip;
-        this.port = port;
+    public RaftAddress(String p_ip, int p_port) {
+        m_ip = p_ip;
+        m_port = p_port;
     }
 
     public RaftAddress(String ip) {
-        this.ip = ip;
+        m_ip = ip;
     }
 
     public RaftAddress() {}
 
     public int getId() {
-        return id;
+        return m_id;
     }
 
     public String getIp() {
-        return ip;
+        return m_ip;
     }
 
     public int getPort() {
-        return port;
+        return m_port;
     }
 
-    public void setPort(int port) {
-        this.port = port;
+    public void setPort(int p_port) {
+        m_port = p_port;
     }
 
     @Override
@@ -54,23 +52,23 @@ public class RaftAddress implements Serializable {
             return false;
         }
         RaftAddress address = (RaftAddress) o;
-        return id == address.id &&
-            port == address.port &&
-            Objects.equals(ip, address.ip);
+        return m_id == address.m_id &&
+            m_port == address.m_port &&
+            Objects.equals(m_ip, address.m_ip);
     }
 
     @Override
     public int hashCode() {
 
-        return Objects.hash(id, ip, port);
+        return Objects.hash(m_id, m_ip, m_port);
     }
 
     @Override
     public String toString() {
         return "RaftAddress{" +
-                "id=" + id +
-                ", ip='" + ip + '\'' +
-                ", port=" + port +
+                "id=" + m_id +
+                ", ip='" + m_ip + '\'' +
+                ", port=" + m_port +
                 '}';
     }
 }

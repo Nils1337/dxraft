@@ -9,31 +9,31 @@ import de.hhu.bsinfo.dxraft.server.RaftServerContext;
 import de.hhu.bsinfo.dxraft.state.ServerState;
 import de.hhu.bsinfo.dxraft.state.StateMachine;
 
-public class DeleteListRequest extends ClientRequest{
-    private String name;
-    private List<RaftData> deletedData;
+public class DeleteListRequest extends AbstractClientRequest {
+    private String m_name;
+    private List<RaftData> m_deletedData;
 
-    public DeleteListRequest(String name) {
-        this.name = name;
+    public DeleteListRequest(String p_name) {
+        m_name = p_name;
     }
 
     public String getName() {
-        return name;
+        return m_name;
     }
 
     @Override
-    public void onCommit(RaftServerContext context, StateMachine stateMachine, ServerState state) {
+    public void onCommit(RaftServerContext p_context, StateMachine p_stateMachine, ServerState p_state) {
         if (!isCommitted()) {
-            deletedData = stateMachine.deleteList(name);
+            m_deletedData = p_stateMachine.deleteList(m_name);
         }
-        super.onCommit(context, stateMachine, state);
+        super.onCommit(p_context, p_stateMachine, p_state);
     }
 
     @Override
     public ClientResponse buildResponse() {
         RaftAddress address = getSenderAddress();
         if (isCommitted() && address != null) {
-            return new ClientResponse(getSenderAddress(), getId(), deletedData);
+            return new ClientResponse(getSenderAddress(), getId(), m_deletedData);
         }
         return null;
     }

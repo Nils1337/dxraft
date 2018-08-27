@@ -6,16 +6,16 @@ import de.hhu.bsinfo.dxraft.data.RaftData;
 
 public interface StateMachine {
 
-    RaftData read(String name);
+    RaftData read(String p_name);
 
-    void write(String name, RaftData data);
+    void write(String p_name, RaftData p_data);
 
-    RaftData delete(String name);
+    RaftData delete(String p_name);
 
-    void writeList(String name, List<RaftData> list);
+    void writeList(String p_name, List<RaftData> p_list);
 
-    List<RaftData> readList(String name);
+    List<RaftData> readList(String p_name);
 
-    List<RaftData> deleteList(String name);
+    List<RaftData> deleteList(String p_name);
 }
 

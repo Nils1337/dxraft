@@ -7,58 +7,58 @@ import java.util.concurrent.*;
 
 public class RaftTimer {
 
-    private RaftServerContext context;
-    private TimeoutHandler timeoutHandler;
-    private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
-    private ScheduledFuture timeoutFuture;
+    private RaftServerContext m_context;
+    private TimeoutHandler m_timeoutHandler;
+    private final ScheduledExecutorService m_scheduler = Executors.newScheduledThreadPool(1);
+    private ScheduledFuture m_timeoutFuture;
 
-    public RaftTimer(RaftServerContext context) {
-        this.context = context;
+    public RaftTimer(RaftServerContext p_context) {
+        m_context = p_context;
     }
 
     public void cancel() {
-        if (timeoutFuture != null && !timeoutFuture.isDone()) {
+        if (m_timeoutFuture != null && !m_timeoutFuture.isDone()) {
             // Timer thread might already be running.
             // It can be interrupted if it's waiting for lock on the RaftServer instance
-            timeoutFuture.cancel(true);
+            m_timeoutFuture.cancel(true);
         }
     }
 
-    public void reset(ServerState.State newState) {
+    public void reset(ServerState.State p_newState) {
         cancel();
 
-        switch (newState) {
+        switch (p_newState) {
             case FOLLOWER:
-                schedule(context.getFollowerTimeoutDuration(), context.getFollowerRandomizationAmount());
+                schedule(m_context.getFollowerTimeoutDuration(), m_context.getFollowerRandomizationAmount());
                 break;
             case CANDIDATE:
-                schedule(context.getElectionTimeoutDuration(), context.getElectionRandomizationAmount());
+                schedule(m_context.getElectionTimeoutDuration(), m_context.getElectionRandomizationAmount());
                 break;
             case LEADER:
-                schedule(context.getHeartbeatTimeoutDuration(), context.getHeartbeatRandomizationAmount());
+                schedule(m_context.getHeartbeatTimeoutDuration(), m_context.getHeartbeatRandomizationAmount());
         }
     }
 
-    public void schedule(int timeoutInMilliseconds, int randomizationAmountInMilliseconds) {
-        if (timeoutHandler == null) {
+    public void schedule(int p_timeoutInMilliseconds, int p_randomizationAmountInMilliseconds) {
+        if (m_timeoutHandler == null) {
             throw new RuntimeException("Timeout handler was not set!");
         }
 
-        int randomizedTimeout = timeoutInMilliseconds;
+        int randomizedTimeout = p_timeoutInMilliseconds;
 
         // randomize timeout
-        if (randomizationAmountInMilliseconds > 0) {
-            randomizedTimeout += ThreadLocalRandom.current().nextInt(0, randomizationAmountInMilliseconds);
+        if (p_randomizationAmountInMilliseconds > 0) {
+            randomizedTimeout += ThreadLocalRandom.current().nextInt(0, p_randomizationAmountInMilliseconds);
         }
 
-        timeoutFuture = scheduler.schedule(() -> {
-            if (timeoutHandler != null) {
-                timeoutHandler.processTimeout();
+        m_timeoutFuture = m_scheduler.schedule(() -> {
+            if (m_timeoutHandler != null) {
+                m_timeoutHandler.processTimeout();
             }
         }, randomizedTimeout, TimeUnit.MILLISECONDS);
     }
 
-    public void setTimeoutHandler(TimeoutHandler timeoutHandler) {
-        this.timeoutHandler = timeoutHandler;
+    public void setTimeoutHandler(TimeoutHandler p_timeoutHandler) {
+        m_timeoutHandler = p_timeoutHandler;
     }
 }

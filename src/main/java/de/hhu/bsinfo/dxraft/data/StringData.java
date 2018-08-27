@@ -4,14 +4,14 @@ import java.util.Objects;
 
 public class StringData implements RaftData {
 
-    private String data;
+    private String m_data;
 
     public String getData() {
-        return data;
+        return m_data;
     }
 
-    public StringData(String data) {
-        this.data = data;
+    public StringData(String p_data) {
+        m_data = p_data;
     }
 
     @Override
@@ -23,17 +23,17 @@ public class StringData implements RaftData {
             return false;
         }
         StringData that = (StringData) o;
-        return Objects.equals(data, that.data);
+        return Objects.equals(m_data, that.m_data);
     }
 
     @Override
     public int hashCode() {
 
-        return Objects.hash(data);
+        return Objects.hash(m_data);
     }
 
     @Override
     public String toString() {
-        return data;
+        return m_data;
     }
 }

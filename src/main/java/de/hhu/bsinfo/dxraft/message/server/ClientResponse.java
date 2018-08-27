@@ -10,42 +10,42 @@ import de.hhu.bsinfo.dxraft.message.RaftMessage;
 
 public class ClientResponse extends RaftMessage {
 
-    private boolean success;
-    private RaftData value;
-    private List<RaftData> listValue;
-    private UUID requestId;
+    private boolean m_success;
+    private RaftData m_value;
+    private List<RaftData> m_listValue;
+    private UUID m_requestId;
 
-    public ClientResponse(RaftAddress receiverAddress, UUID requestId, boolean success) {
-        super(receiverAddress);
-        this.success = success;
-        this.requestId = requestId;
+    public ClientResponse(RaftAddress p_receiverAddress, UUID p_requestId, boolean p_success) {
+        super(p_receiverAddress);
+        m_success = p_success;
+        m_requestId = p_requestId;
     }
 
-    public ClientResponse(RaftAddress receiverAddress, UUID requestId, RaftData value) {
-        super(receiverAddress);
-        this.value = value;
-        this.requestId = requestId;
+    public ClientResponse(RaftAddress p_receiverAddress, UUID p_requestId, RaftData p_value) {
+        super(p_receiverAddress);
+        m_value = p_value;
+        m_requestId = p_requestId;
     }
 
-    public ClientResponse(RaftAddress receiverAddress, UUID requestId, List<RaftData> value) {
-        super(receiverAddress);
-        listValue = value;
-        this.requestId = requestId;
+    public ClientResponse(RaftAddress p_receiverAddress, UUID p_requestId, List<RaftData> p_value) {
+        super(p_receiverAddress);
+        m_listValue = p_value;
+        m_requestId = p_requestId;
     }
 
     public boolean isSuccess() {
-        return success;
+        return m_success;
     }
 
     public RaftData getValue() {
-        return value;
+        return m_value;
     }
 
     public List<RaftData> getListValue() {
-        return listValue;
+        return m_listValue;
     }
 
     public UUID getRequestId() {
-        return requestId;
+        return m_requestId;
     }
 }

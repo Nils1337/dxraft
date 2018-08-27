@@ -8,27 +8,27 @@ import de.hhu.bsinfo.dxraft.server.RaftServerContext;
 import de.hhu.bsinfo.dxraft.state.ServerState;
 import de.hhu.bsinfo.dxraft.state.StateMachine;
 
-public class RemoveServerRequest extends ClientRequest {
+public class RemoveServerRequest extends AbstractClientRequest {
 
-    private RaftAddress oldServer;
+    private RaftAddress m_oldServer;
 
-    private transient boolean serverRemoved = false;
+    private transient boolean m_serverRemoved = false;
 
-    public RemoveServerRequest(RaftAddress oldServer) {
-        this.oldServer = oldServer;
+    public RemoveServerRequest(RaftAddress p_oldServer) {
+        m_oldServer = p_oldServer;
     }
 
     public RaftAddress getOldServer() {
-        return oldServer;
+        return m_oldServer;
     }
 
     @Override
-    public void onAppend(RaftServerContext context, StateMachine stateMachine, ServerState state) {
-        super.onAppend(context, stateMachine, state);
-        if (!serverRemoved) {
-            context.removeServer(oldServer);
-            stateMachine.write(SpecialPaths.CLUSTER_CONFIG_PATH, new ClusterConfigData(context.getRaftServers()));
-            serverRemoved = true;
+    public void onAppend(RaftServerContext p_context, StateMachine p_stateMachine, ServerState p_state) {
+        super.onAppend(p_context, p_stateMachine, p_state);
+        if (!m_serverRemoved) {
+            p_context.removeServer(m_oldServer);
+            p_stateMachine.write(SpecialPaths.CLUSTER_CONFIG_PATH, new ClusterConfigData(p_context.getRaftServers()));
+            m_serverRemoved = true;
         }
     }
 
@@ -42,19 +42,19 @@ public class RemoveServerRequest extends ClientRequest {
     }
 
     @Override
-    public void onRemove(RaftServerContext context, StateMachine stateMachine) {
-        if (serverRemoved) {
-            context.addServer(oldServer);
-            serverRemoved = false;
+    public void onRemove(RaftServerContext p_context, StateMachine p_stateMachine) {
+        if (m_serverRemoved) {
+            p_context.addServer(m_oldServer);
+            m_serverRemoved = false;
         }
     }
 
     @Override
-    public void onCommit(RaftServerContext context, StateMachine stateMachine, ServerState state) {
-        if (oldServer.equals(context.getLocalAddress())) {
+    public void onCommit(RaftServerContext p_context, StateMachine p_stateMachine, ServerState p_state) {
+        if (m_oldServer.equals(p_context.getLocalAddress())) {
             // if the removed server is the server itself, it should now stop taking part in the cluster
-            state.becomeIdle();
+            p_state.becomeIdle();
         }
-        super.onCommit(context, stateMachine, state);
+        super.onCommit(p_context, p_stateMachine, p_state);
     }
 }

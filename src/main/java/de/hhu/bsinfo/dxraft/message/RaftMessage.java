@@ -5,45 +5,45 @@ import de.hhu.bsinfo.dxraft.context.RaftAddress;
 import java.io.Serializable;
 
 public class RaftMessage implements Serializable {
-    protected int receiverId;
-    protected RaftAddress senderAddress;
-    protected RaftAddress receiverAddress;
+    private int m_receiverId;
+    private RaftAddress m_senderAddress;
+    private RaftAddress m_receiverAddress;
 
     protected RaftMessage() {}
 
-    protected RaftMessage(int receiverId) {
-        this.receiverId = receiverId;
+    protected RaftMessage(int p_receiverId) {
+        m_receiverId = p_receiverId;
     }
 
-    protected RaftMessage(RaftAddress receiverAddress) {
-        this.receiverAddress = receiverAddress;
+    protected RaftMessage(RaftAddress p_receiverAddress) {
+        m_receiverAddress = p_receiverAddress;
     }
 
     public RaftAddress getSenderAddress() {
-        return senderAddress;
+        return m_senderAddress;
     }
 
-    public void setSenderAddress(RaftAddress senderAddress) {
-        this.senderAddress = senderAddress;
+    public void setSenderAddress(RaftAddress p_senderAddress) {
+        m_senderAddress = p_senderAddress;
     }
 
     public RaftAddress getReceiverAddress() {
-        return receiverAddress;
+        return m_receiverAddress;
     }
 
-    public void setReceiverAddress(RaftAddress receiverAddress) {
-        this.receiverAddress = receiverAddress;
+    public void setReceiverAddress(RaftAddress p_receiverAddress) {
+        m_receiverAddress = p_receiverAddress;
     }
 
     public int getSenderId() {
-        return senderAddress.getId();
+        return m_senderAddress.getId();
     }
 
     public int getReceiverId() {
-        return receiverId;
+        return m_receiverId;
     }
 
-    public void setReceiverId(int receiverId) {
-        this.receiverId = receiverId;
+    public void setReceiverId(int p_receiverId) {
+        m_receiverId = p_receiverId;
     }
 }

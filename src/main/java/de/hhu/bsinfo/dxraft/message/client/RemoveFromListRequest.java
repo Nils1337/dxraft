@@ -9,49 +9,49 @@ import de.hhu.bsinfo.dxraft.server.RaftServerContext;
 import de.hhu.bsinfo.dxraft.state.ServerState;
 import de.hhu.bsinfo.dxraft.state.StateMachine;
 
-public class RemoveFromListRequest extends ClientRequest {
+public class RemoveFromListRequest extends AbstractClientRequest {
 
-    private String name;
-    private RaftData value;
-    private boolean deleteIfEmpty;
+    private String m_name;
+    private RaftData m_value;
+    private boolean m_deleteIfEmpty;
 
-    private transient boolean success;
+    private transient boolean m_success;
 
-    public RemoveFromListRequest(String name, RaftData value, boolean deleteIfEmpty) {
-        this.name = name;
-        this.value = value;
-        this.deleteIfEmpty = deleteIfEmpty;
+    public RemoveFromListRequest(String p_name, RaftData p_value, boolean p_deleteIfEmpty) {
+        m_name = p_name;
+        m_value = p_value;
+        m_deleteIfEmpty = p_deleteIfEmpty;
     }
 
     public String getName() {
-        return name;
+        return m_name;
     }
 
     public RaftData getValue() {
-        return value;
+        return m_value;
     }
 
     @Override
-    public void onCommit(RaftServerContext context, StateMachine stateMachine, ServerState state) {
+    public void onCommit(RaftServerContext p_context, StateMachine p_stateMachine, ServerState p_state) {
         if (!isCommitted()) {
-            List<RaftData> list = stateMachine.readList(name);
+            List<RaftData> list = p_stateMachine.readList(m_name);
             if (list != null) {
-                success = list.remove(value);
-                if (success && list.isEmpty() && deleteIfEmpty) {
-                    stateMachine.deleteList(name);
+                m_success = list.remove(m_value);
+                if (m_success && list.isEmpty() && m_deleteIfEmpty) {
+                    p_stateMachine.deleteList(m_name);
                 }
             } else {
-                success = false;
+                m_success = false;
             }
         }
-        super.onCommit(context, stateMachine, state);
+        super.onCommit(p_context, p_stateMachine, p_state);
     }
 
     @Override
     public ClientResponse buildResponse() {
         RaftAddress address = getSenderAddress();
         if (isCommitted() && address != null) {
-            return new ClientResponse(getSenderAddress(), getId(), success);
+            return new ClientResponse(getSenderAddress(), getId(), m_success);
         }
         return null;
     }

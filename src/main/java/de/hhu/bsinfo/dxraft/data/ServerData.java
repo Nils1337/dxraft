@@ -4,13 +4,13 @@ import de.hhu.bsinfo.dxraft.context.RaftAddress;
 
 public class ServerData implements RaftData {
 
-    private RaftAddress server;
+    private RaftAddress m_server;
 
-    public ServerData(RaftAddress server) {
-        this.server = server;
+    public ServerData(RaftAddress p_server) {
+        m_server = p_server;
     }
 
     public RaftAddress getServer() {
-        return server;
+        return m_server;
     }
 }

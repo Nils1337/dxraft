@@ -7,45 +7,45 @@ import de.hhu.bsinfo.dxraft.server.RaftServerContext;
 import de.hhu.bsinfo.dxraft.state.ServerState;
 import de.hhu.bsinfo.dxraft.state.StateMachine;
 
-public class WriteRequest extends ClientRequest {
+public class WriteRequest extends AbstractClientRequest {
 
-    private String name;
-    private RaftData value;
-    private boolean overwrite = true;
+    private String m_name;
+    private RaftData m_value;
+    private boolean m_overwrite = true;
 
     private transient boolean success;
 
-    public WriteRequest(String name, RaftData value, boolean overwrite) {
-        this.name = name;
-        this.value = value;
-        this.overwrite = overwrite;
+    public WriteRequest(String p_name, RaftData p_value, boolean p_overwrite) {
+        m_name = p_name;
+        m_value = p_value;
+        m_overwrite = p_overwrite;
     }
 
-    public WriteRequest(String name, RaftData value) {
-        this.name = name;
-        this.value = value;
+    public WriteRequest(String p_name, RaftData p_value) {
+        m_name = p_name;
+        m_value = p_value;
     }
 
     public String getName() {
-        return name;
+        return m_name;
     }
 
     public RaftData getValue() {
-        return value;
+        return m_value;
     }
 
     @Override
-    public void onCommit(RaftServerContext context, StateMachine stateMachine, ServerState state) {
+    public void onCommit(RaftServerContext p_context, StateMachine p_stateMachine, ServerState p_state) {
         if (!isCommitted()) {
-            RaftData data = stateMachine.read(name);
-            if (overwrite || data == null) {
-                stateMachine.write(name, value);
+            RaftData data = p_stateMachine.read(m_name);
+            if (m_overwrite || data == null) {
+                p_stateMachine.write(m_name, m_value);
                 success = true;
             } else {
                 success = false;
             }
         }
-        super.onCommit(context, stateMachine, state);
+        super.onCommit(p_context, p_stateMachine, p_state);
     }
 
     @Override
