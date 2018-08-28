@@ -1,19 +1,30 @@
 {
-    "servers": [
+    "m_servers": [
         {
-            "id": 1,
-            "ip": "127.0.0.1",
-            "port": 3001
+            "m_id": 1,
+            "m_ip": "127.0.0.1",
+            "m_port": 5454
         },
         {
-            "id": 2,
-            "ip": "127.0.0.1",
-            "port": 3002
+            "m_id": 2,
+            "m_ip": "127.0.0.1",
+            "m_port": 5455
         },
         {
-            "id": 3,
-            "ip": "127.0.0.1",
-            "port": 3003
+            "m_id": 3,
+            "m_ip": "127.0.0.1",
+            "m_port": 5456
         }
-    ]
+    ],
+    "m_localAddress": {
+        "m_id": 1,
+        "m_ip": "127.0.0.1",
+        "m_port": 5454
+    },
+    "m_followerTimeoutDuration": 100,
+    "m_followerRandomizationAmount": 50,
+    "m_electionTimeoutDuration": 100,
+    "m_electionRandomizationAmount": 50,
+    "m_heartbeatTimeoutDuration": 50,
+    "m_heartbeatRandomizationAmount": 0
 }

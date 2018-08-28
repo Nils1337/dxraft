@@ -1,14 +1,20 @@
 package de.hhu.bsinfo.dxraft.server;
 
-import de.hhu.bsinfo.dxraft.context.RaftAddress;
-import de.hhu.bsinfo.dxraft.context.RaftContext;
+import de.hhu.bsinfo.dxraft.net.RaftAddress;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-public class RaftServerContext extends RaftContext {
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
+public class ServerContext {
+
+    private static final Logger LOGGER = LogManager.getLogger();
+    // List of all servers in cluster acting as raft servers
+    private List<RaftAddress> m_servers;
 
     // timeout duration and randomization amount when following leader
     private int m_followerTimeoutDuration;
@@ -24,10 +30,10 @@ public class RaftServerContext extends RaftContext {
 
     private RaftAddress m_localAddress;
 
-    public RaftServerContext(List<RaftAddress> p_raftServers, RaftAddress p_localAddress, int p_followerTimeoutDuration,
+    public ServerContext(List<RaftAddress> p_servers, RaftAddress p_localAddress, int p_followerTimeoutDuration,
         int p_followerRandomizationAmount, int p_electionTimeoutDuration, int p_electionRandomizationAmount,
         int p_heartbeatTimeoutDuration, int p_heartbeatRandomizationAmount) {
-        super(p_raftServers);
+        m_servers = new ArrayList<>(p_servers);
         m_localAddress = p_localAddress;
         m_followerTimeoutDuration = p_followerTimeoutDuration;
         m_followerRandomizationAmount = p_followerRandomizationAmount;
@@ -61,14 +67,41 @@ public class RaftServerContext extends RaftContext {
         return m_heartbeatRandomizationAmount;
     }
 
+    public List<RaftAddress> getServers() {
+        return m_servers;
+    }
+
+    public void setLocalAddress(RaftAddress p_localAddress) {
+        m_localAddress = p_localAddress;
+    }
+
+    public int getServerCount() {
+        return m_servers.size();
+    }
+
+    public void addServer(RaftAddress p_newServer) {
+        // TODO what if server gets added that is already in the list?
+        LOGGER.info("Adding server {} to configuration", p_newServer.toString());
+        m_servers.add(p_newServer);
+    }
+
+    public void removeServer(RaftAddress p_server) {
+        LOGGER.info("Removing server {} from configuration", p_server.toString());
+        m_servers.remove(p_server);
+    }
+
     public Set<Integer> getOtherServerIds() {
-        return getRaftServers().stream()
+        return m_servers.stream()
             .filter(address -> !address.equals(m_localAddress))
             .map(RaftAddress::getId).collect(Collectors.toSet());
     }
 
     public Set<RaftAddress> getOtherRaftServers() {
-        return getRaftServers().stream().filter(address -> !address.equals(m_localAddress)).collect(Collectors.toSet());
+        return m_servers.stream().filter(address -> !address.equals(m_localAddress)).collect(Collectors.toSet());
+    }
+
+    public boolean singleServerCluster() {
+        return m_servers.stream().anyMatch(address -> !address.equals(m_localAddress));
     }
 
     public int getLocalId() {
@@ -81,7 +114,7 @@ public class RaftServerContext extends RaftContext {
             return m_localAddress;
         }
 
-        for (RaftAddress server : getRaftServers()) {
+        for (RaftAddress server : m_servers) {
             if (server.getId() == p_id) {
                 return server;
             }
@@ -95,7 +128,7 @@ public class RaftServerContext extends RaftContext {
 
 
     public Set<Integer> getServersIds() {
-        return getRaftServers().stream().map(RaftAddress::getId).collect(Collectors.toSet());
+        return m_servers.stream().map(RaftAddress::getId).collect(Collectors.toSet());
     }
 
     public static final class RaftServerContextBuilder {
@@ -155,7 +188,7 @@ public class RaftServerContext extends RaftContext {
             return this;
         }
 
-        public RaftServerContext build() {
+        public ServerContext build() {
             if (m_localAddress == null) {
                 throw new IllegalArgumentException("Local Address must be provided!");
             }
@@ -165,7 +198,7 @@ public class RaftServerContext extends RaftContext {
 //                raftServers.add(localAddress);
 //            }
 
-            return new RaftServerContext(m_raftServers, m_localAddress, m_followerTimeoutDuration,
+            return new ServerContext(m_raftServers, m_localAddress, m_followerTimeoutDuration,
                 m_followerRandomizationAmount, m_electionTimeoutDuration, m_electionRandomizationAmount,
                 m_heartbeatTimeoutDuration, m_heartbeatRandomizationAmount);
         }

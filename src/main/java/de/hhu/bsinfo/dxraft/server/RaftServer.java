@@ -1,11 +1,12 @@
 package de.hhu.bsinfo.dxraft.server;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import de.hhu.bsinfo.dxraft.context.RaftAddress;
+import de.hhu.bsinfo.dxraft.net.RaftAddress;
 import de.hhu.bsinfo.dxraft.log.InMemoryLog;
 import de.hhu.bsinfo.dxraft.log.Log;
 import de.hhu.bsinfo.dxraft.log.LogEntry;
@@ -28,24 +29,27 @@ import de.hhu.bsinfo.dxraft.state.StateMachine;
 import de.hhu.bsinfo.dxraft.timer.RaftTimer;
 import de.hhu.bsinfo.dxraft.timer.TimeoutHandler;
 
-public class RaftServer implements ServerMessageReceiver, TimeoutHandler {
+public final class RaftServer implements ServerMessageReceiver, TimeoutHandler {
 
     private static final Logger LOGGER = LogManager.getLogger();
 
     private AbstractServerNetworkService m_networkService;
-    private RaftServerContext m_context;
+    private ServerContext m_context;
     private ServerState m_state;
     private Log m_log;
     private RaftTimer m_timer;
 
     private boolean m_started = false;
 
-    public RaftServer(AbstractServerNetworkService p_networkService, RaftServerContext p_context, ServerState p_state, Log p_log, RaftTimer p_timer) {
+    private RaftServer(AbstractServerNetworkService p_networkService, ServerContext p_context, ServerState p_state,
+        Log p_log, RaftTimer p_timer) {
         m_networkService = p_networkService;
         m_context = p_context;
         m_state = p_state;
         m_log = p_log;
         m_timer = p_timer;
+        // set id for logging file if not already set
+        System.setProperty("server.id", String.valueOf(p_context.getLocalId()));
         LOGGER.info("Constructing server with id {}", p_context.getLocalId());
     }
 
@@ -56,7 +60,7 @@ public class RaftServer implements ServerMessageReceiver, TimeoutHandler {
 
             // if server is started with empty context, instantly become leader
             // and add local address to log by processing a dummy request
-            if (m_context.getRaftServers().isEmpty()) {
+            if (m_context.getServers().isEmpty()) {
                 m_state.setState(ServerState.State.CANDIDATE);
                 m_state.convertStateToLeader();
                 LOGGER.info("Bootstrapping in standalone mode");
@@ -280,7 +284,7 @@ public class RaftServer implements ServerMessageReceiver, TimeoutHandler {
 
                 // instantly commit entry if no other server in cluster
                 // else send append entries requests
-                if (m_context.getOtherRaftServers().isEmpty()) {
+                if (m_context.singleServerCluster()) {
                     commitEntries();
                 } else {
                     for (int server : m_context.getOtherServerIds()) {
@@ -366,8 +370,9 @@ public class RaftServer implements ServerMessageReceiver, TimeoutHandler {
      * Sends vote requests to all servers.
      */
     private void sendVoteRequests() {
-        VoteRequest voteRequest = new VoteRequest(RaftAddress.INVALID_ID, m_state.getCurrentTerm(), m_log.getLastIndex(), m_log
-            .getLastIndex() >= 0 ? m_log.getLastEntry().getTerm() : -1);
+        VoteRequest voteRequest = new VoteRequest(RaftAddress.INVALID_ID,
+            m_state.getCurrentTerm(), m_log.getLastIndex(),
+            m_log.getLastIndex() >= 0 ? m_log.getLastEntry().getTerm() : -1);
         sendMessageToAllServers(voteRequest);
     }
 
@@ -443,12 +448,21 @@ public class RaftServer implements ServerMessageReceiver, TimeoutHandler {
 
     public static final class RaftServerBuilder {
         private AbstractServerNetworkService m_networkService;
-        private RaftServerContext m_context;
+        private ServerContext m_context;
         private ServerState m_state;
         private Log m_log;
         private LogStorage m_logStorage;
         private StateMachine m_stateMachine;
         private RaftTimer m_timer;
+
+        private RaftAddress m_localAddress;
+        private List<RaftAddress> m_raftServers = new ArrayList<>();
+        private int m_followerTimeoutDuration = 100;
+        private int m_followerRandomizationAmount = 50;
+        private int m_electionTimeoutDuration = 100;
+        private int m_electionRandomizationAmount = 50;
+        private int m_heartbeatTimeoutDuration = 50;
+        private int m_heartbeatRandomizationAmount = 0;
 
         private RaftServerBuilder() {
         }
@@ -457,12 +471,52 @@ public class RaftServer implements ServerMessageReceiver, TimeoutHandler {
             return new RaftServerBuilder();
         }
 
+        public RaftServerBuilder withRaftServers(List<RaftAddress> p_raftServers) {
+            m_raftServers = p_raftServers;
+            return this;
+        }
+
+        public RaftServerBuilder withFollowerTimeoutDuration(int p_followerTimeoutDuration) {
+            m_followerTimeoutDuration = p_followerTimeoutDuration;
+            return this;
+        }
+
+        public RaftServerBuilder withFollowerRandomizationAmount(int p_followerRandomizationAmount) {
+            m_followerRandomizationAmount = p_followerRandomizationAmount;
+            return this;
+        }
+
+        public RaftServerBuilder withLocalAddress(RaftAddress p_localAddress) {
+            m_localAddress = p_localAddress;
+            return this;
+        }
+
+        public RaftServerBuilder withElectionTimeoutDuration(int p_electionTimeoutDuration) {
+            m_electionTimeoutDuration = p_electionTimeoutDuration;
+            return this;
+        }
+
+        public RaftServerBuilder withElectionRandomizationAmount(int p_electionRandomizationAmount) {
+            m_electionRandomizationAmount = p_electionRandomizationAmount;
+            return this;
+        }
+
+        public RaftServerBuilder withHeartbeatTimeoutDuration(int p_heartbeatTimeoutDuration) {
+            m_heartbeatTimeoutDuration = p_heartbeatTimeoutDuration;
+            return this;
+        }
+
+        public RaftServerBuilder withHeartbeatRandomizationAmount(int p_heartbeatRandomizationAmount) {
+            m_heartbeatRandomizationAmount = p_heartbeatRandomizationAmount;
+            return this;
+        }
+
         public RaftServerBuilder withNetworkService(AbstractServerNetworkService p_networkService) {
             m_networkService = p_networkService;
             return this;
         }
 
-        public RaftServerBuilder withContext(RaftServerContext p_context) {
+        public RaftServerBuilder withContext(ServerContext p_context) {
             m_context = p_context;
             return this;
         }
@@ -494,7 +548,15 @@ public class RaftServer implements ServerMessageReceiver, TimeoutHandler {
 
         public RaftServer build() {
             if (m_context == null) {
-                throw new IllegalArgumentException("Context must be provided!");
+                if (m_localAddress == null) {
+                    throw new IllegalArgumentException("Context with local address or " +
+                        "only local address must be provided!");
+                }
+
+                m_context = new ServerContext(m_raftServers, m_localAddress,
+                    m_followerTimeoutDuration, m_followerRandomizationAmount,
+                    m_electionTimeoutDuration, m_electionRandomizationAmount,
+                    m_heartbeatTimeoutDuration, m_heartbeatRandomizationAmount);
             }
 
             if (m_stateMachine == null) {

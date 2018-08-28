@@ -1,6 +1,6 @@
 package de.hhu.bsinfo.dxraft.server
 
-import de.hhu.bsinfo.dxraft.context.RaftAddress
+import de.hhu.bsinfo.dxraft.net.RaftAddress
 
 import de.hhu.bsinfo.dxraft.log.Log
 import de.hhu.bsinfo.dxraft.message.server.AppendEntriesRequest
@@ -22,7 +22,7 @@ import spock.lang.Unroll
 
 class RaftServerSpec extends Specification {
 
-    def context = Mock(RaftServerContext)
+    def context = Mock(ServerContext)
     def netService = Mock(AbstractServerNetworkService)
     def log = Mock(Log)
     def timer = Mock(RaftTimer)
@@ -343,6 +343,7 @@ class RaftServerSpec extends Specification {
             def request = Mock(WriteRequest)
             def servers = [1, 2]
             context.getOtherServerIds() >> servers
+            context.singleServerCluster() >> false
 
             state.isLeader() >> true
             log.contains(_) >> false
@@ -364,6 +365,7 @@ class RaftServerSpec extends Specification {
             def request = Mock(DeleteRequest)
             def servers = [1, 2, 3]
             context.getOtherServerIds() >> servers
+            context.singleServerCluster() >> false
 
             state.isLeader() >> true
             log.contains(_) >> false

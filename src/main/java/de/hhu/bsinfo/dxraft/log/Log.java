@@ -1,6 +1,6 @@
 package de.hhu.bsinfo.dxraft.log;
 
-import de.hhu.bsinfo.dxraft.server.RaftServerContext;
+import de.hhu.bsinfo.dxraft.server.ServerContext;
 import de.hhu.bsinfo.dxraft.state.ServerState;
 import de.hhu.bsinfo.dxraft.state.StateMachine;
 
@@ -10,12 +10,12 @@ import java.util.List;
 public class Log {
 
     private int m_commitIndex = -1;
-    private RaftServerContext m_context;
+    private ServerContext m_context;
     private StateMachine m_stateMachine;
     private ServerState m_state;
     private LogStorage m_logStorage;
 
-    public Log(RaftServerContext p_context) {
+    public Log(ServerContext p_context) {
         m_context = p_context;
     }
 

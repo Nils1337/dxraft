@@ -1,10 +1,10 @@
 package de.hhu.bsinfo.dxraft.message.client;
 
-import de.hhu.bsinfo.dxraft.context.RaftAddress;
+import de.hhu.bsinfo.dxraft.net.RaftAddress;
 import de.hhu.bsinfo.dxraft.data.ClusterConfigData;
 import de.hhu.bsinfo.dxraft.data.SpecialPaths;
 import de.hhu.bsinfo.dxraft.message.server.ClientResponse;
-import de.hhu.bsinfo.dxraft.server.RaftServerContext;
+import de.hhu.bsinfo.dxraft.server.ServerContext;
 import de.hhu.bsinfo.dxraft.state.ServerState;
 import de.hhu.bsinfo.dxraft.state.StateMachine;
 
@@ -23,11 +23,11 @@ public class AddServerRequest extends AbstractClientRequest {
     }
 
     @Override
-    public void onAppend(RaftServerContext p_context, StateMachine p_stateMachine, ServerState p_state) {
+    public void onAppend(ServerContext p_context, StateMachine p_stateMachine, ServerState p_state) {
         super.onAppend(p_context, p_stateMachine, p_state);
         if (!m_serverAdded) {
             p_context.addServer(m_newServer);
-            p_stateMachine.write(SpecialPaths.CLUSTER_CONFIG_PATH, new ClusterConfigData(p_context.getRaftServers()));
+            p_stateMachine.write(SpecialPaths.CLUSTER_CONFIG_PATH, new ClusterConfigData(p_context.getServers()));
             m_serverAdded = true;
 
             if (m_newServer.equals(p_context.getLocalAddress())) {
@@ -47,7 +47,7 @@ public class AddServerRequest extends AbstractClientRequest {
     }
 
     @Override
-    public void onRemove(RaftServerContext p_context, StateMachine p_stateMachine) {
+    public void onRemove(ServerContext p_context, StateMachine p_stateMachine) {
         if (m_serverAdded) {
             p_context.removeServer(m_newServer);
             m_serverAdded = false;

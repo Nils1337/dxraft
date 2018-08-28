@@ -1,37 +1,36 @@
 package de.hhu.bsinfo.dxraft.client;
 
-import de.hhu.bsinfo.dxraft.context.RaftAddress;
-import de.hhu.bsinfo.dxraft.context.RaftContext;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Scanner;
+import java.util.concurrent.ThreadLocalRandom;
+
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
+import de.hhu.bsinfo.dxraft.net.RaftAddress;
 import de.hhu.bsinfo.dxraft.data.ClusterConfigData;
+import de.hhu.bsinfo.dxraft.data.RaftData;
 import de.hhu.bsinfo.dxraft.data.ServerData;
 import de.hhu.bsinfo.dxraft.data.SpecialPaths;
 import de.hhu.bsinfo.dxraft.data.StringData;
-import de.hhu.bsinfo.dxraft.message.*;
-import de.hhu.bsinfo.dxraft.data.RaftData;
+import de.hhu.bsinfo.dxraft.message.RaftMessage;
+import de.hhu.bsinfo.dxraft.message.client.AbstractClientRequest;
 import de.hhu.bsinfo.dxraft.message.client.AddServerRequest;
 import de.hhu.bsinfo.dxraft.message.client.AppendToListRequest;
-import de.hhu.bsinfo.dxraft.message.client.AbstractClientRequest;
 import de.hhu.bsinfo.dxraft.message.client.CompareAndSetRequest;
 import de.hhu.bsinfo.dxraft.message.client.DeleteListRequest;
-import de.hhu.bsinfo.dxraft.message.client.ReadListRequest;
-import de.hhu.bsinfo.dxraft.message.client.RemoveFromListRequest;
-import de.hhu.bsinfo.dxraft.message.client.WriteListRequest;
 import de.hhu.bsinfo.dxraft.message.client.DeleteRequest;
+import de.hhu.bsinfo.dxraft.message.client.ReadListRequest;
 import de.hhu.bsinfo.dxraft.message.client.ReadRequest;
+import de.hhu.bsinfo.dxraft.message.client.RemoveFromListRequest;
 import de.hhu.bsinfo.dxraft.message.client.RemoveServerRequest;
+import de.hhu.bsinfo.dxraft.message.client.WriteListRequest;
 import de.hhu.bsinfo.dxraft.message.client.WriteRequest;
 import de.hhu.bsinfo.dxraft.message.server.ClientRedirection;
 import de.hhu.bsinfo.dxraft.message.server.ClientResponse;
 import de.hhu.bsinfo.dxraft.net.ClientDatagramNetworkService;
 import de.hhu.bsinfo.dxraft.net.ClientNetworkService;
-
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Scanner;
-import java.util.concurrent.ThreadLocalRandom;
 
 public class RaftClient {
 
@@ -40,15 +39,15 @@ public class RaftClient {
     private static final int RETRY_TIMEOUT = 100;
     private static final int OVERALL_TRY_DURATION = 10 * 1000;
 
-    private RaftContext m_context;
+    private ClientContext m_context;
     private ClientNetworkService m_networkService;
 
-    public RaftClient(RaftContext p_context, ClientNetworkService p_networkService) {
+    public RaftClient(ClientContext p_context, ClientNetworkService p_networkService) {
         m_context = p_context;
         m_networkService = p_networkService;
     }
 
-    public RaftClient(RaftContext p_context) {
+    public RaftClient(ClientContext p_context) {
         m_context = p_context;
         m_networkService = new ClientDatagramNetworkService();
     }
@@ -93,7 +92,8 @@ public class RaftClient {
     }
 
     public boolean write(String p_name, short p_value, boolean p_overwrite) {
-        ClientResponse response = sendRequest(new WriteRequest(p_name, new StringData(String.valueOf(p_value)), p_overwrite));
+        ClientResponse response = sendRequest(
+            new WriteRequest(p_name, new StringData(String.valueOf(p_value)), p_overwrite));
         if (response != null) {
             return response.isSuccess();
         }
@@ -176,6 +176,9 @@ public class RaftClient {
     public boolean addServer(RaftAddress p_server) {
         ClientResponse response = sendRequest(new AddServerRequest(p_server));
         if (response != null) {
+            if (response.isSuccess()) {
+                m_context.getRaftServers().add(p_server);
+            }
             return response.isSuccess();
         }
 
@@ -185,6 +188,9 @@ public class RaftClient {
     public boolean removeServer(RaftAddress p_server) {
         ClientResponse response = sendRequest(new RemoveServerRequest(p_server));
         if (response != null) {
+            if (response.isSuccess()) {
+                m_context.getRaftServers().remove(p_server);
+            }
             return response.isSuccess();
         }
 
@@ -300,7 +306,7 @@ public class RaftClient {
             addresses.add(new RaftAddress(address[0], port));
         }
 
-        RaftContext context = new RaftContext(addresses);
+        ClientContext context = new ClientContext(addresses);
 
         RaftClient client = new RaftClient(context);
 
@@ -359,10 +365,43 @@ public class RaftClient {
                 } else {
                     System.out.println("Could not determine current configuration!");
                 }
+            } else if (in.startsWith("add")) {
+                String[] strings = in.split(" ");
+                if (strings.length > 3) {
+                    int id = Integer.parseInt(strings[1]);
+                    String ip = strings[2];
+                    int port = Integer.parseInt(strings[3]);
+                    System.out.println("Adding server with id " + id + " running at " + ip + ':' + port + "...");
+                    RaftAddress address = new RaftAddress(id, ip, port);
+                    boolean success = client.addServer(address);
+                    if (success) {
+                        System.out.println("Server successfully added");
+                    } else {
+                        System.out.println("Adding server failed!");
+                    }
+                } else {
+                    System.out.println("invalid operation!");
+                }
+            } else if (in.startsWith("remove")) {
+                String[] strings = in.split(" ");
+                if (strings.length > 3) {
+                    int id = Integer.parseInt(strings[1]);
+                    String ip = strings[2];
+                    int port = Integer.parseInt(strings[3]);
+                    System.out.println("Removing server with id " + id + " running at " + ip + ':' + port + "...");
+                    RaftAddress address = new RaftAddress(id, ip, port);
+                    boolean success = client.removeServer(address);
+                    if (success) {
+                        System.out.println("Server successfully removed");
+                    } else {
+                        System.out.println("Removing server failed!");
+                    }
+                } else {
+                    System.out.println("invalid operation!");
+                }
             } else {
                 System.out.println("invalid operation!");
             }
-
         }
     }
 

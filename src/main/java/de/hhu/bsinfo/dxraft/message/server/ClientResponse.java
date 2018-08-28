@@ -4,7 +4,7 @@ package de.hhu.bsinfo.dxraft.message.server;
 import java.util.List;
 import java.util.UUID;
 
-import de.hhu.bsinfo.dxraft.context.RaftAddress;
+import de.hhu.bsinfo.dxraft.net.RaftAddress;
 import de.hhu.bsinfo.dxraft.data.RaftData;
 import de.hhu.bsinfo.dxraft.message.RaftMessage;
 

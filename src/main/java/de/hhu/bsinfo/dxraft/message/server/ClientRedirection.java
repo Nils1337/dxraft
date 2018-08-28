@@ -1,6 +1,6 @@
 package de.hhu.bsinfo.dxraft.message.server;
 
-import de.hhu.bsinfo.dxraft.context.RaftAddress;
+import de.hhu.bsinfo.dxraft.net.RaftAddress;
 import de.hhu.bsinfo.dxraft.message.RaftMessage;
 
 public class ClientRedirection extends RaftMessage {

@@ -1,6 +1,6 @@
 package de.hhu.bsinfo.dxraft.log;
 
-import de.hhu.bsinfo.dxraft.server.RaftServerContext;
+import de.hhu.bsinfo.dxraft.server.ServerContext;
 import de.hhu.bsinfo.dxraft.state.ServerState;
 import de.hhu.bsinfo.dxraft.state.StateMachine;
 
@@ -9,12 +9,12 @@ import java.util.List;
 
 public class InMemoryLog implements LogStorage {
 
-    private RaftServerContext m_context;
+    private ServerContext m_context;
     private StateMachine m_stateMachine;
     private ServerState m_state;
     private List<LogEntry> m_log = new ArrayList<>();
 
-    public InMemoryLog(RaftServerContext p_context) {
+    public InMemoryLog(ServerContext p_context) {
         m_context = p_context;
     }
 

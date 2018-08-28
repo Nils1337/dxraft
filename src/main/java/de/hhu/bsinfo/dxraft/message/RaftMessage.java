@@ -1,6 +1,6 @@
 package de.hhu.bsinfo.dxraft.message;
 
-import de.hhu.bsinfo.dxraft.context.RaftAddress;
+import de.hhu.bsinfo.dxraft.net.RaftAddress;
 
 import java.io.Serializable;
 

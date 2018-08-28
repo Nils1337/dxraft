@@ -1,12 +1,12 @@
 package de.hhu.bsinfo.dxraft.message.client;
 
-import de.hhu.bsinfo.dxraft.context.RaftAddress;
+import de.hhu.bsinfo.dxraft.net.RaftAddress;
 import de.hhu.bsinfo.dxraft.data.ClusterConfigData;
 import de.hhu.bsinfo.dxraft.data.RaftData;
 import de.hhu.bsinfo.dxraft.data.ServerData;
 import de.hhu.bsinfo.dxraft.data.SpecialPaths;
 import de.hhu.bsinfo.dxraft.message.server.ClientResponse;
-import de.hhu.bsinfo.dxraft.server.RaftServerContext;
+import de.hhu.bsinfo.dxraft.server.ServerContext;
 import de.hhu.bsinfo.dxraft.state.ServerState;
 import de.hhu.bsinfo.dxraft.state.StateMachine;
 
@@ -23,12 +23,12 @@ public class ReadRequest extends AbstractClientRequest {
     }
 
     @Override
-    public void onCommit(RaftServerContext p_context, StateMachine p_stateMachine, ServerState p_state) {
+    public void onCommit(ServerContext p_context, StateMachine p_stateMachine, ServerState p_state) {
         if (!isCommitted()) {
             if (m_name.equals(SpecialPaths.LEADER_PATH)) {
                 m_value = new ServerData(p_context.getLocalAddress());
             } else if (m_name.equals(SpecialPaths.CLUSTER_CONFIG_PATH)) {
-                m_value = new ClusterConfigData(p_context.getRaftServers());
+                m_value = new ClusterConfigData(p_context.getServers());
             } else {
                 m_value = p_stateMachine.read(m_name);
             }

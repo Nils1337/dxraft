@@ -1,12 +1,12 @@
 package de.hhu.bsinfo.dxraft.state;
 
-import de.hhu.bsinfo.dxraft.context.RaftAddress;
+import de.hhu.bsinfo.dxraft.net.RaftAddress;
 import de.hhu.bsinfo.dxraft.log.Log;
 import de.hhu.bsinfo.dxraft.log.LogEntry;
 import de.hhu.bsinfo.dxraft.message.client.AddServerRequest;
 import de.hhu.bsinfo.dxraft.message.client.AbstractClientRequest;
 import de.hhu.bsinfo.dxraft.message.client.RemoveServerRequest;
-import de.hhu.bsinfo.dxraft.server.RaftServerContext;
+import de.hhu.bsinfo.dxraft.server.ServerContext;
 import de.hhu.bsinfo.dxraft.timer.RaftTimer;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -26,9 +26,9 @@ public class ServerState {
 
     private State m_state = State.FOLLOWER;
     private RaftTimer m_timer;
-    private RaftServerContext m_context;
+    private ServerContext m_context;
 
-    public ServerState(RaftServerContext p_context) {
+    public ServerState(ServerContext p_context) {
         m_context = p_context;
     }
 
@@ -73,7 +73,7 @@ public class ServerState {
         // Only count the vote for itself if the server is part of its own configuration.
         // The removal of the server from the configuration might be pending but not committed, during which the server
         // should operate normally but should not count its own vote
-        if (m_context.getRaftServers().contains(m_context.getLocalAddress())) {
+        if (m_context.getServers().contains(m_context.getLocalAddress())) {
             votes++;
         }
         return  votes;

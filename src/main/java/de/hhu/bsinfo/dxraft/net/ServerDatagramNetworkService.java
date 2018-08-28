@@ -1,8 +1,7 @@
 package de.hhu.bsinfo.dxraft.net;
 
-import de.hhu.bsinfo.dxraft.context.RaftAddress;
 import de.hhu.bsinfo.dxraft.message.*;
-import de.hhu.bsinfo.dxraft.server.RaftServerContext;
+import de.hhu.bsinfo.dxraft.server.ServerContext;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -14,11 +13,11 @@ public class ServerDatagramNetworkService extends AbstractServerNetworkService {
     private static final Logger LOGGER = LogManager.getLogger();
 
     private static final int MAX_MESSAGE_SIZE = 65535;
-    private RaftServerContext context;
+    private ServerContext context;
     private DatagramSocket serverSocket;
     private Thread receiverThread;
 
-    public ServerDatagramNetworkService(RaftServerContext context) {
+    public ServerDatagramNetworkService(ServerContext context) {
         this.context = context;
 
         try  {

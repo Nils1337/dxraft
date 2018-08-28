@@ -1,115 +1,101 @@
 package de.hhu.bsinfo.dxraft;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.Reader;
-import java.lang.reflect.Type;
-import java.net.URISyntaxException;
-import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
 import java.util.Optional;
-import java.util.Properties;
 
 import com.google.gson.Gson;
-import com.google.gson.JsonArray;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
-import com.google.gson.reflect.TypeToken;
 
-import de.hhu.bsinfo.dxraft.context.RaftAddress;
+import de.hhu.bsinfo.dxraft.net.RaftAddress;
 import de.hhu.bsinfo.dxraft.server.RaftServer;
-import de.hhu.bsinfo.dxraft.server.RaftServerContext;
+import de.hhu.bsinfo.dxraft.server.ServerContext;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 public final class DXRaft {
 
-    private static final String CONFIG_FILE_PATH = "config.json";
+    private static final String DEFAULT_CONFIG_FILE_PATH = "config.json";
     private static final Logger LOGGER = LogManager.getLogger();
 
     private DXRaft() {}
 
     public static void main(String[] p_args) {
-        String idString = System.getProperty("server.id");
-
-        if (idString == null) {
-            System.out.println("Id must be provided. Exiting...");
-            return;
-        }
-
-        int id = RaftAddress.INVALID_ID;
-
-        try {
-            id = Integer.parseInt(idString);
-        } catch (NumberFormatException e) {
-            System.out.println("Could not parse id. Exiting...");
-            return;
-        }
-
-        if (id == RaftAddress.INVALID_ID) {
-            System.out.println("Invalid id. Exiting...");
-        }
-
-        JsonParser parser = new JsonParser();
         Gson gson = new Gson();
-        JsonObject config;
+        InputStream configStream;
+        ServerContext context;
 
-        InputStream configStream = DXRaft.class.getClassLoader().getResourceAsStream(CONFIG_FILE_PATH);
+        String configPath = System.getProperty("config");
+        if (configPath == null || !new File(configPath).exists()) {
+            System.out.println("No config path given or file does not exist, using default config file");
+            configStream = DXRaft.class.getClassLoader().getResourceAsStream(DEFAULT_CONFIG_FILE_PATH);
 
-        if (configStream == null) {
-            LOGGER.error("Config file could not be found. Exiting...");
+            if (configStream == null) {
+                System.out.println("Default config file could not be found. Exiting...");
+                return;
+            }
+
+            Reader reader = new InputStreamReader(configStream);
+            context = gson.fromJson(reader, ServerContext.class);
+        } else {
+            System.out.println("Reading " + configPath + "...");
+            try {
+                context = gson.fromJson(new String(Files.readAllBytes(Paths.get(configPath))), ServerContext.class);
+            } catch (IOException e) {
+                System.out.println("Error reading given config file. Exiting...");
+                return;
+            }
+        }
+
+        overwriteLocalAddress(context);
+
+        if (context.getLocalAddress() == null) {
+            System.out.println("Address of server could not be determined. Exiting...");
             return;
         }
 
-        Reader reader = new InputStreamReader(configStream);
-        config = parser.parse(reader).getAsJsonObject();
+        RaftServer server = RaftServer.RaftServerBuilder.aRaftServer().withContext(context).build();
 
-        JsonArray servers = config.getAsJsonArray("servers");
-        Type type = new TypeToken<ArrayList<RaftAddress>>(){}.getType();
-        List<RaftAddress> addresses = gson.fromJson(servers, type);
-
-        final int localId = id;
-        Optional<RaftAddress> localAddress = addresses.stream().filter(addr -> addr.getId() == localId).findAny();
-
-        if (localAddress.isPresent()) {
-            RaftServerContext context = RaftServerContext.RaftServerContextBuilder.aRaftServerContext()
-                .withRaftServers(addresses)
-                .withLocalAddress(localAddress.get())
-                .build();
-
-            RaftServer server = RaftServer.RaftServerBuilder.aRaftServer().withContext(context).build();
-            server.bootstrapNewCluster();
-        } else {
-            String ip = System.getProperty("server.ip");
-            String portString = System.getProperty("server.port");
-            if (ip == null || portString == null) {
-                LOGGER.error("Server not in configuration and no ip or no port given. Exiting...");
-                return;
-            }
-
-            int port;
-
-            try {
-                port = Integer.parseInt(idString);
-            } catch (NumberFormatException e) {
-                System.out.println("Could not parse port. Exiting...");
-                return;
-            }
-
-            RaftServerContext context = RaftServerContext.RaftServerContextBuilder.aRaftServerContext()
-                .withRaftServers(addresses)
-                .withLocalAddress(new RaftAddress(id, ip, port))
-                .build();
-
-            RaftServer server = RaftServer.RaftServerBuilder.aRaftServer().withContext(context).build();
+        if (join(context)) {
             server.joinExistingCluster();
+        } else {
+            server.bootstrapNewCluster();
         }
+    }
+
+    private static void overwriteLocalAddress(ServerContext p_context) {
+        String idString = System.getProperty("server.id");
+        int id;
+
+        if (idString != null) {
+            try {
+                id = Integer.parseInt(idString);
+            } catch (NumberFormatException e) {
+                System.out.println("Warning: Could not parse id.");
+                return;
+            }
+
+            if (id == RaftAddress.INVALID_ID) {
+                System.out.println("Warning: Invalid id in parameter.");
+                return;
+            }
+
+            // overwrite local address from config with the id provided as parameter
+            final int localId = id;
+            Optional<RaftAddress> localAddress = p_context.getServers().stream()
+                .filter(addr -> addr.getId() == localId).findAny();
+
+            localAddress.ifPresent(p_context::setLocalAddress);
+        }
+    }
+
+    private static boolean join(ServerContext p_context) {
+        return !p_context.getServers().contains(p_context.getLocalAddress());
     }
 
 

@@ -3,14 +3,14 @@ package de.hhu.bsinfo.dxraft.state
 import de.hhu.bsinfo.dxraft.log.Log
 import de.hhu.bsinfo.dxraft.log.LogEntry
 import de.hhu.bsinfo.dxraft.log.LogStorage
-import de.hhu.bsinfo.dxraft.server.RaftServerContext
+import de.hhu.bsinfo.dxraft.server.ServerContext
 import spock.lang.Specification
 
 
 class LogSpec extends Specification {
 
     def stateMachine = Mock(StateMachine)
-    def context = Mock(RaftServerContext)
+    def context = Mock(ServerContext)
     def logStorage = Mock(LogStorage)
     def log = new Log(context)
 

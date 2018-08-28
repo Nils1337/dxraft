@@ -1,9 +1,9 @@
 package de.hhu.bsinfo.dxraft.state
 
-import de.hhu.bsinfo.dxraft.context.RaftAddress
+import de.hhu.bsinfo.dxraft.net.RaftAddress
 
 import de.hhu.bsinfo.dxraft.log.Log
-import de.hhu.bsinfo.dxraft.server.RaftServerContext
+import de.hhu.bsinfo.dxraft.server.ServerContext
 import de.hhu.bsinfo.dxraft.timer.RaftTimer
 import spock.lang.Specification
 import spock.lang.Unroll
@@ -13,7 +13,7 @@ class ServerStateSpec extends Specification {
 
     def timer = Mock(RaftTimer)
     def log = Mock(Log)
-    def context = Mock(RaftServerContext)
+    def context = Mock(ServerContext)
     def state = new ServerState(context)
     def servers = [2, 3]
 

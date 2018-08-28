@@ -1,4 +1,4 @@
-package de.hhu.bsinfo.dxraft.context;
+package de.hhu.bsinfo.dxraft.net;
 
 import java.io.Serializable;
 import java.util.Objects;

@@ -1,6 +1,6 @@
 package de.hhu.bsinfo.dxraft.data;
 
-import de.hhu.bsinfo.dxraft.context.RaftAddress;
+import de.hhu.bsinfo.dxraft.net.RaftAddress;
 
 public class ServerData implements RaftData {
 

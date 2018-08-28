@@ -3,7 +3,7 @@ package de.hhu.bsinfo.dxraft.message.client;
 
 import de.hhu.bsinfo.dxraft.message.MessageDeliverer;
 import de.hhu.bsinfo.dxraft.message.RaftMessage;
-import de.hhu.bsinfo.dxraft.server.RaftServerContext;
+import de.hhu.bsinfo.dxraft.server.ServerContext;
 import de.hhu.bsinfo.dxraft.server.ServerMessageReceiver;
 import de.hhu.bsinfo.dxraft.log.LogEntry;
 import de.hhu.bsinfo.dxraft.state.ServerState;
@@ -64,7 +64,7 @@ public abstract class AbstractClientRequest extends RaftMessage implements Messa
     }
 
     @Override
-    public void onCommit(RaftServerContext p_context, StateMachine p_stateMachine, ServerState p_state) {
+    public void onCommit(ServerContext p_context, StateMachine p_stateMachine, ServerState p_state) {
         m_committed = true;
     }
 

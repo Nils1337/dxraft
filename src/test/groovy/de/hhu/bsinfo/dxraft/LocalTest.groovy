@@ -1,11 +1,11 @@
 package de.hhu.bsinfo.dxraft
 
 import de.hhu.bsinfo.dxraft.client.RaftClient
-import de.hhu.bsinfo.dxraft.context.RaftAddress
-import de.hhu.bsinfo.dxraft.context.RaftContext
+import de.hhu.bsinfo.dxraft.net.RaftAddress
+import de.hhu.bsinfo.dxraft.client.ClientContext
 import de.hhu.bsinfo.dxraft.data.StringData
 import de.hhu.bsinfo.dxraft.server.RaftServer
-import de.hhu.bsinfo.dxraft.server.RaftServerContext
+import de.hhu.bsinfo.dxraft.server.ServerContext
 import spock.lang.Specification
 import spock.lang.Unroll
 
@@ -32,7 +32,7 @@ class LocalTest extends Specification {
         serverCount.times {
             def localAddress = new RaftAddress(it, "127.0.0.1", portFrom + it)
 
-            def context = RaftServerContext.RaftServerContextBuilder
+            def context = ServerContext.RaftServerContextBuilder
                 .aRaftServerContext()
                 .withLocalAddress(localAddress)
                 .withRaftServers(serverAddresses)
@@ -51,7 +51,7 @@ class LocalTest extends Specification {
             server.bootstrapNewCluster()
         }
 
-        def context = new RaftContext(serverAddresses)
+        def context = new ClientContext(serverAddresses)
         client = new RaftClient(context)
     }
 
@@ -111,7 +111,7 @@ class LocalTest extends Specification {
 
         def newAddress = new RaftAddress(3, "127.0.0.1", portFrom + 3)
 
-        def context = RaftServerContext.RaftServerContextBuilder
+        def context = ServerContext.RaftServerContextBuilder
             .aRaftServerContext()
             .withLocalAddress(newAddress)
             .withRaftServers(serverAddresses)
@@ -157,12 +157,7 @@ class LocalTest extends Specification {
 
         def localAddress = new RaftAddress("127.0.0.1")
 
-        def context = RaftServerContext.RaftServerContextBuilder
-            .aRaftServerContext()
-            .withLocalAddress(localAddress)
-            .withRaftServers(serverAddresses)
-            .build()
-
+        def context = new ClientContext(serverAddresses)
         def client2 = new RaftClient(context)
 
         expect:

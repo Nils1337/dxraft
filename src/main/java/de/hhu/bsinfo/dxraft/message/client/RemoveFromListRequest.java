@@ -2,10 +2,10 @@ package de.hhu.bsinfo.dxraft.message.client;
 
 import java.util.List;
 
-import de.hhu.bsinfo.dxraft.context.RaftAddress;
+import de.hhu.bsinfo.dxraft.net.RaftAddress;
 import de.hhu.bsinfo.dxraft.data.RaftData;
 import de.hhu.bsinfo.dxraft.message.server.ClientResponse;
-import de.hhu.bsinfo.dxraft.server.RaftServerContext;
+import de.hhu.bsinfo.dxraft.server.ServerContext;
 import de.hhu.bsinfo.dxraft.state.ServerState;
 import de.hhu.bsinfo.dxraft.state.StateMachine;
 
@@ -32,7 +32,7 @@ public class RemoveFromListRequest extends AbstractClientRequest {
     }
 
     @Override
-    public void onCommit(RaftServerContext p_context, StateMachine p_stateMachine, ServerState p_state) {
+    public void onCommit(ServerContext p_context, StateMachine p_stateMachine, ServerState p_state) {
         if (!isCommitted()) {
             List<RaftData> list = p_stateMachine.readList(m_name);
             if (list != null) {

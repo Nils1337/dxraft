@@ -4,20 +4,6 @@ DXRaft is a lightweight implementation of the Raft Consensus Algorithm. It is in
 
 ## Build
 
-First edit the config file (src/main/resoruces/config.json). It should contain all servers that will be part of the cluster, e.g.
-```JSON
-{
-    "servers": [
-        {
-            "id": 1,
-            "ip": "127.0.0.1",
-            "port": 5454
-        }
-    ]
-}
-```
-if only one local server should be part of the cluster.
-
 To build DXRaft, run
 ```
 gradle jar
@@ -26,11 +12,26 @@ The jar can now be found in build/libs
 
 ## Run Server
 
+First create a config file (an example can be found in src/main/resources/config.json). 
+It should at least contain all servers that will be part of the cluster, e.g.
+```JSON
+{
+    "m_servers": [
+        {
+            "m_id": 1,
+            "m_ip": "127.0.0.1",
+            "m_port": 5454
+        }
+    ]
+}
+```
+if only one local server should be part of the cluster
+
 To run a server instance, do
 ```
-java -Dserver.id=1 -jar dxraft-0.1.jar
+java -Dconfig=config.json -Dserver.id=1 -jar dxraft-0.1.jar
 ```
-with the server id matching an id in the config file
+with the path to the created config and the server id matching an id in the config file
 
 ## Run Client
 
