@@ -134,10 +134,6 @@ class LocalTest extends Specification {
 
         client.read("test") == data
 
-        servers[1].shutdown()
-
-        client.read("test") == data
-
         client.removeServer(serverAddresses[1])
 
         client.getCurrentLeader() in serverAddresses[0,2] + [newAddress]

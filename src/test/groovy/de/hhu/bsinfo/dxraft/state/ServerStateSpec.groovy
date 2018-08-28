@@ -52,7 +52,7 @@ class ServerStateSpec extends Specification {
             state.convertStateToLeader()
         then:
             1 * timer.reset(ServerState.State.LEADER)
-            context.getServersIds() >> servers
+            context.getAllServersIds() >> servers
             log.getUncommittedEntries() >> []
 
             state.isLeader()

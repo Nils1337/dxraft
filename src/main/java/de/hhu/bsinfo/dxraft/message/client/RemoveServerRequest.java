@@ -12,7 +12,7 @@ public class RemoveServerRequest extends AbstractClientRequest {
 
     private RaftAddress m_oldServer;
 
-    private transient boolean m_serverRemoved = false;
+    private transient boolean m_pending = false;
 
     public RemoveServerRequest(RaftAddress p_oldServer) {
         m_oldServer = p_oldServer;
@@ -25,10 +25,9 @@ public class RemoveServerRequest extends AbstractClientRequest {
     @Override
     public void onAppend(ServerContext p_context, StateMachine p_stateMachine, ServerState p_state) {
         super.onAppend(p_context, p_stateMachine, p_state);
-        if (!m_serverRemoved) {
-            p_context.removeServer(m_oldServer);
-            p_stateMachine.write(SpecialPaths.CLUSTER_CONFIG_PATH, new ClusterConfigData(p_context.getServers()));
-            m_serverRemoved = true;
+        if (!m_pending) {
+            p_context.startRemoveServer(m_oldServer);
+            m_pending = true;
         }
     }
 
@@ -43,14 +42,17 @@ public class RemoveServerRequest extends AbstractClientRequest {
 
     @Override
     public void onRemove(ServerContext p_context, StateMachine p_stateMachine) {
-        if (m_serverRemoved) {
-            p_context.addServer(m_oldServer);
-            m_serverRemoved = false;
+        if (m_pending) {
+            p_context.cancelRemoveServer(m_oldServer);
+            m_pending = false;
         }
     }
 
     @Override
     public void onCommit(ServerContext p_context, StateMachine p_stateMachine, ServerState p_state) {
+        p_context.finishRemoveServer(m_oldServer);
+        p_stateMachine.write(SpecialPaths.CLUSTER_CONFIG_PATH, new ClusterConfigData(p_context.getServers()));
+
         if (m_oldServer.equals(p_context.getLocalAddress())) {
             // if the removed server is the server itself, it should now stop taking part in the cluster
             p_state.becomeIdle();

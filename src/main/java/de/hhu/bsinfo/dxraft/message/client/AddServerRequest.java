@@ -26,7 +26,7 @@ public class AddServerRequest extends AbstractClientRequest {
     public void onAppend(ServerContext p_context, StateMachine p_stateMachine, ServerState p_state) {
         super.onAppend(p_context, p_stateMachine, p_state);
         if (!m_serverAdded) {
-            p_context.addServer(m_newServer);
+            p_context.startAddServer(m_newServer);
             p_stateMachine.write(SpecialPaths.CLUSTER_CONFIG_PATH, new ClusterConfigData(p_context.getServers()));
             m_serverAdded = true;
 
@@ -49,8 +49,14 @@ public class AddServerRequest extends AbstractClientRequest {
     @Override
     public void onRemove(ServerContext p_context, StateMachine p_stateMachine) {
         if (m_serverAdded) {
-            p_context.removeServer(m_newServer);
+            p_context.cancelAddServer(m_newServer);
             m_serverAdded = false;
         }
+    }
+
+    @Override
+    public void onCommit(ServerContext p_context, StateMachine p_stateMachine, ServerState p_state) {
+        p_context.finishAddServer(m_newServer);
+        super.onCommit(p_context, p_stateMachine, p_state);
     }
 }

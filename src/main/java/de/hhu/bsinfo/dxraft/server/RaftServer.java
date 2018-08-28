@@ -317,7 +317,7 @@ public final class RaftServer implements ServerMessageReceiver, TimeoutHandler {
 
             // instantly become leader if no other servers in cluster
             // else send vote requests
-            if (m_context.getOtherRaftServers().isEmpty()) {
+            if (m_context.singleServerCluster()) {
                 m_state.convertStateToLeader();
             } else {
                 sendVoteRequests();

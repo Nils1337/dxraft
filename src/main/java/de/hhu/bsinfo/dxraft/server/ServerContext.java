@@ -28,6 +28,8 @@ public class ServerContext {
     private int m_heartbeatTimeoutDuration;
     private int m_heartbeatRandomizationAmount;
 
+    private int m_pendingConfigChange = 0;
+
     private RaftAddress m_localAddress;
 
     public ServerContext(List<RaftAddress> p_servers, RaftAddress p_localAddress, int p_followerTimeoutDuration,
@@ -76,17 +78,56 @@ public class ServerContext {
     }
 
     public int getServerCount() {
-        return m_servers.size();
+        return m_servers.size() - m_pendingConfigChange;
     }
 
-    public void addServer(RaftAddress p_newServer) {
+    public void startAddServer(RaftAddress p_newServer) {
         // TODO what if server gets added that is already in the list?
-        LOGGER.info("Adding server {} to configuration", p_newServer.toString());
-        m_servers.add(p_newServer);
+        if (m_pendingConfigChange == 0) {
+            LOGGER.info("Started adding server {} to configuration", p_newServer.toString());
+            m_pendingConfigChange = 1;
+            m_servers.add(p_newServer);
+        } else {
+            throw new IllegalStateException("Only one concurrent config change allowed!");
+        }
     }
 
-    public void removeServer(RaftAddress p_server) {
-        LOGGER.info("Removing server {} from configuration", p_server.toString());
+    public void cancelAddServer(RaftAddress p_newServer) {
+        if (m_pendingConfigChange == 1) {
+            LOGGER.info("Cancelled adding server {} to configuration", p_newServer.toString());
+            m_pendingConfigChange = 0;
+            m_servers.remove(p_newServer);
+        } else {
+            throw new IllegalStateException("No config change pending");
+        }
+    }
+
+    public void finishAddServer(RaftAddress p_newServer) {
+        LOGGER.info("Finished adding server {} to configuration", p_newServer.toString());
+        m_pendingConfigChange = 0;
+    }
+
+    public void startRemoveServer(RaftAddress p_server) {
+        if (m_pendingConfigChange == 0) {
+            LOGGER.info("Started removing server {} from configuration", p_server.toString());
+            m_pendingConfigChange = 1;
+        } else {
+            throw new IllegalStateException("Only one concurrent config change allowed!");
+        }
+    }
+
+    public void cancelRemoveServer(RaftAddress p_newServer) {
+        if (m_pendingConfigChange == 1) {
+            LOGGER.info("Cancelled removing server {} from configuration", p_newServer.toString());
+            m_pendingConfigChange = 0;
+        } else {
+            throw new IllegalStateException("No config change pending");
+        }
+    }
+
+    public void finishRemoveServer(RaftAddress p_server) {
+        LOGGER.info("Finished removing server {} from configuration", p_server.toString());
+        m_pendingConfigChange = 0;
         m_servers.remove(p_server);
     }
 
@@ -96,12 +137,8 @@ public class ServerContext {
             .map(RaftAddress::getId).collect(Collectors.toSet());
     }
 
-    public Set<RaftAddress> getOtherRaftServers() {
-        return m_servers.stream().filter(address -> !address.equals(m_localAddress)).collect(Collectors.toSet());
-    }
-
     public boolean singleServerCluster() {
-        return m_servers.stream().anyMatch(address -> !address.equals(m_localAddress));
+        return m_servers.stream().allMatch(address -> address.equals(m_localAddress));
     }
 
     public int getLocalId() {
@@ -124,11 +161,6 @@ public class ServerContext {
 
     public RaftAddress getLocalAddress() {
         return m_localAddress;
-    }
-
-
-    public Set<Integer> getServersIds() {
-        return m_servers.stream().map(RaftAddress::getId).collect(Collectors.toSet());
     }
 
     public static final class RaftServerContextBuilder {
