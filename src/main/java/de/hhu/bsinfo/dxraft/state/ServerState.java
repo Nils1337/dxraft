@@ -1,12 +1,10 @@
 package de.hhu.bsinfo.dxraft.state;
 
-import de.hhu.bsinfo.dxraft.net.RaftAddress;
+import de.hhu.bsinfo.dxraft.data.RaftAddress;
 import de.hhu.bsinfo.dxraft.log.Log;
-import de.hhu.bsinfo.dxraft.log.LogEntry;
-import de.hhu.bsinfo.dxraft.message.client.AddServerRequest;
-import de.hhu.bsinfo.dxraft.message.client.AbstractClientRequest;
-import de.hhu.bsinfo.dxraft.message.client.RemoveServerRequest;
-import de.hhu.bsinfo.dxraft.server.ServerContext;
+import de.hhu.bsinfo.dxraft.log.entry.ConfigChangeEntry;
+import de.hhu.bsinfo.dxraft.log.entry.LogEntry;
+import de.hhu.bsinfo.dxraft.server.ServerConfig;
 import de.hhu.bsinfo.dxraft.timer.RaftTimer;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -26,10 +24,11 @@ public class ServerState {
 
     private State m_state = State.FOLLOWER;
     private RaftTimer m_timer;
-    private ServerContext m_context;
+    private ServerConfig m_context;
 
-    public ServerState(ServerContext p_context) {
+    public ServerState(ServerConfig p_context, RaftTimer p_timer) {
         m_context = p_context;
+        m_timer = p_timer;
     }
 
     ////////////////
@@ -73,7 +72,7 @@ public class ServerState {
         // Only count the vote for itself if the server is part of its own configuration.
         // The removal of the server from the configuration might be pending but not committed, during which the server
         // should operate normally but should not count its own vote
-        if (m_context.getServers().contains(m_context.getLocalAddress())) {
+        if (m_context.getAllServerIds().contains(m_context.getLocalId())) {
             votes++;
         }
         return  votes;
@@ -92,20 +91,20 @@ public class ServerState {
     ///////////////////
 
     // save pending configuration requests because they are not allowed to be handled concurrently
-    private List<AbstractClientRequest> m_pendingConfigChangeRequests = new ArrayList<>();
+    private List<LogEntry> m_pendingConfigChangeRequests = new ArrayList<>();
 
-    public void addPendingConfigChangeRequest(AbstractClientRequest p_request) {
+    public void addPendingConfigChangeRequest(LogEntry p_request) {
         m_pendingConfigChangeRequests.add(p_request);
     }
 
-    public AbstractClientRequest popPendingConfigChangeRequest() {
+    public LogEntry popPendingConfigChangeRequest() {
         if (!m_pendingConfigChangeRequests.isEmpty()) {
             return m_pendingConfigChangeRequests.remove(0);
         }
         return null;
     }
 
-    public AbstractClientRequest getPendingConfigChangeRequest() {
+    public LogEntry getPendingConfigChangeRequest() {
         if (!m_pendingConfigChangeRequests.isEmpty()) {
             return m_pendingConfigChangeRequests.get(0);
         }
@@ -122,23 +121,22 @@ public class ServerState {
         // if becoming leader, check if there is an uncommitted (pending)
         // configuration change in the log and add it to the pending list
         for (LogEntry logEntry : m_log.getUncommittedEntries()) {
-            if (logEntry instanceof AddServerRequest || logEntry instanceof RemoveServerRequest) {
-                AbstractClientRequest request = (AbstractClientRequest) logEntry;
-                m_pendingConfigChangeRequests.add(request);
+            if (logEntry instanceof ConfigChangeEntry) {
+                m_pendingConfigChangeRequests.add(logEntry);
             }
         }
     }
 
     // map for the next indices to send to each server
-    private Map<Integer, Integer> m_nextIndexMap = new HashMap<Integer, Integer>();
+    private Map<Short, Integer> m_nextIndexMap = new HashMap<>();
 
     private void resetNextIndices() {
-        for (Integer id: m_context.getOtherServerIds()) {
+        for (Short id: m_context.getOtherServerIds()) {
             m_nextIndexMap.put(id, m_log.getLastIndex() + 1);
         }
     }
 
-    public void decrementNextIndex(int p_id) {
+    public void decrementNextIndex(short p_id) {
         if (m_state != State.LEADER) {
             throw new IllegalStateException("Server could not update next index because state is "
                 + m_state + " but should be LEADER!");
@@ -146,7 +144,7 @@ public class ServerState {
         m_nextIndexMap.computeIfPresent(p_id, (k, v) -> v > 0 ? v - 1 : v);
     }
 
-    public void updateNextIndex(int p_id, int p_index) {
+    public void updateNextIndex(short p_id, int p_index) {
         if (m_state != State.LEADER) {
             throw new IllegalStateException("Server could not update next index because state is "
                 + m_state + " but should be LEADER!");
@@ -154,21 +152,21 @@ public class ServerState {
         m_nextIndexMap.put(p_id, p_index);
     }
 
-    public int getNextIndex(int p_id) {
+    public int getNextIndex(short p_id) {
         Integer index = m_nextIndexMap.get(p_id);
         return index == null ? 0 : index;
     }
 
     // map for the indices that match with the local log
-    private Map<Integer, Integer> m_matchIndexMap = new HashMap<Integer, Integer>();
+    private Map<Short, Integer> m_matchIndexMap = new HashMap<>();
 
     private void resetMatchIndices() {
-        for (Integer id: m_context.getOtherServerIds()) {
+        for (Short id: m_context.getOtherServerIds()) {
             m_nextIndexMap.put(id, 0);
         }
     }
 
-    public void updateMatchIndex(int p_id, int p_index) {
+    public void updateMatchIndex(short p_id, int p_index) {
         if (m_state != State.LEADER) {
             throw new IllegalStateException("Server could not update match index because state is "
                 + m_state + " but should be LEADER!");
@@ -176,7 +174,7 @@ public class ServerState {
         m_matchIndexMap.put(p_id, p_index);
     }
 
-    public int getMatchIndex(int p_id) {
+    public int getMatchIndex(short p_id) {
         Integer index = m_matchIndexMap.get(p_id);
         return index == null ? -1 : index;
     }

@@ -1,18 +1,18 @@
 package de.hhu.bsinfo.dxraft.timer;
 
-import de.hhu.bsinfo.dxraft.server.ServerContext;
+import de.hhu.bsinfo.dxraft.server.ServerConfig;
 import de.hhu.bsinfo.dxraft.state.ServerState;
 
 import java.util.concurrent.*;
 
 public class RaftTimer {
 
-    private ServerContext m_context;
+    private ServerConfig m_context;
     private TimeoutHandler m_timeoutHandler;
     private final ScheduledExecutorService m_scheduler = Executors.newScheduledThreadPool(1);
     private ScheduledFuture m_timeoutFuture;
 
-    public RaftTimer(ServerContext p_context) {
+    public RaftTimer(ServerConfig p_context) {
         m_context = p_context;
     }
 

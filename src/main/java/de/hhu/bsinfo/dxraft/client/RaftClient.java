@@ -1,60 +1,57 @@
 package de.hhu.bsinfo.dxraft.client;
 
+import java.io.*;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Scanner;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.stream.Collectors;
 
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.google.gson.JsonElement;
+import de.hhu.bsinfo.dxraft.ConfigUtils;
+import de.hhu.bsinfo.dxraft.DXRaft;
+import de.hhu.bsinfo.dxraft.client.message.DefaultRequestFactory;
+import de.hhu.bsinfo.dxraft.client.message.Request;
+import de.hhu.bsinfo.dxraft.client.message.RequestFactory;
+import de.hhu.bsinfo.dxraft.data.*;
+import de.hhu.bsinfo.dxraft.server.ServerConfig;
+import de.hhu.bsinfo.dxraft.server.message.RequestResponse;
+import de.hhu.bsinfo.dxutils.JsonUtil;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import de.hhu.bsinfo.dxraft.net.RaftAddress;
-import de.hhu.bsinfo.dxraft.data.ClusterConfigData;
-import de.hhu.bsinfo.dxraft.data.RaftData;
-import de.hhu.bsinfo.dxraft.data.ServerData;
-import de.hhu.bsinfo.dxraft.data.SpecialPaths;
-import de.hhu.bsinfo.dxraft.data.StringData;
-import de.hhu.bsinfo.dxraft.message.RaftMessage;
-import de.hhu.bsinfo.dxraft.message.client.AbstractClientRequest;
-import de.hhu.bsinfo.dxraft.message.client.AddServerRequest;
-import de.hhu.bsinfo.dxraft.message.client.AppendToListRequest;
-import de.hhu.bsinfo.dxraft.message.client.CompareAndSetRequest;
-import de.hhu.bsinfo.dxraft.message.client.DeleteListRequest;
-import de.hhu.bsinfo.dxraft.message.client.DeleteRequest;
-import de.hhu.bsinfo.dxraft.message.client.ReadListRequest;
-import de.hhu.bsinfo.dxraft.message.client.ReadRequest;
-import de.hhu.bsinfo.dxraft.message.client.RemoveFromListRequest;
-import de.hhu.bsinfo.dxraft.message.client.RemoveServerRequest;
-import de.hhu.bsinfo.dxraft.message.client.WriteListRequest;
-import de.hhu.bsinfo.dxraft.message.client.WriteRequest;
-import de.hhu.bsinfo.dxraft.message.server.ClientRedirection;
-import de.hhu.bsinfo.dxraft.message.server.ClientResponse;
-import de.hhu.bsinfo.dxraft.net.ClientDatagramNetworkService;
-import de.hhu.bsinfo.dxraft.net.ClientNetworkService;
+import de.hhu.bsinfo.dxraft.net.datagram.DatagramClientNetworkService;
+import de.hhu.bsinfo.dxraft.client.net.ClientNetworkService;
 
 public class RaftClient {
 
     private static final Logger LOGGER = LogManager.getLogger();
+    private static final String CLIENT_CONFIG_PATH = "config/client-config.json";
 
-    private static final int RETRY_TIMEOUT = 100;
-    private static final int OVERALL_TRY_DURATION = 10 * 1000;
-
-    private ClientContext m_context;
+    private ClientConfig m_context;
     private ClientNetworkService m_networkService;
+    private RequestFactory m_requestFactory;
 
-    public RaftClient(ClientContext p_context, ClientNetworkService p_networkService) {
+    public RaftClient(ClientConfig p_context, ClientNetworkService p_networkService, RequestFactory p_requestFactory) {
         m_context = p_context;
         m_networkService = p_networkService;
+        m_requestFactory = p_requestFactory;
     }
 
-    public RaftClient(ClientContext p_context) {
+    public RaftClient(ClientConfig p_context) {
         m_context = p_context;
-        m_networkService = new ClientDatagramNetworkService();
+        m_networkService = new DatagramClientNetworkService();
+        m_requestFactory = new DefaultRequestFactory();
     }
 
     public RaftData read(String p_path) {
-        ClientResponse response = sendRequest(new ReadRequest(p_path));
-        if (response != null) {
+        RequestResponse response = sendRequest(m_requestFactory.getReadRequest(p_path));
+        if (response != null && response.isSuccess()) {
             return response.getValue();
         }
 
@@ -62,8 +59,8 @@ public class RaftClient {
     }
 
     public short readShort(String p_path) {
-        ClientResponse response = sendRequest(new ReadRequest(p_path));
-        if (response != null) {
+        RequestResponse response = sendRequest(m_requestFactory.getReadRequest(p_path));
+        if (response != null && response.isSuccess()) {
             try {
                 return Short.parseShort(((StringData) response.getValue()).getData());
             } catch (NumberFormatException | ClassCastException e) {
@@ -74,16 +71,16 @@ public class RaftClient {
     }
 
     public boolean exists(String p_name) {
-        ClientResponse response = sendRequest(new ReadRequest(p_name));
+        RequestResponse response = sendRequest(m_requestFactory.getReadRequest(p_name));
         if (response != null) {
-            return response.getValue() != null;
+            return response.isSuccess();
         }
 
         return false;
     }
 
     public boolean write(String p_name, RaftData p_value, boolean p_overwrite) {
-        ClientResponse response = sendRequest(new WriteRequest(p_name, p_value, p_overwrite));
+        RequestResponse response = sendRequest(m_requestFactory.getWriteRequest(p_name, p_value, p_overwrite));
         if (response != null) {
             return response.isSuccess();
         }
@@ -92,8 +89,8 @@ public class RaftClient {
     }
 
     public boolean write(String p_name, short p_value, boolean p_overwrite) {
-        ClientResponse response = sendRequest(
-            new WriteRequest(p_name, new StringData(String.valueOf(p_value)), p_overwrite));
+        RequestResponse response = sendRequest(
+            m_requestFactory.getWriteRequest(p_name, new StringData(String.valueOf(p_value)), p_overwrite));
         if (response != null) {
             return response.isSuccess();
         }
@@ -102,7 +99,7 @@ public class RaftClient {
     }
 
     public boolean compareAndSet(String p_name, RaftData p_value, RaftData p_compareValue) {
-        ClientResponse response = sendRequest(new CompareAndSetRequest(p_name, p_value, p_compareValue));
+        RequestResponse response = sendRequest(m_requestFactory.getCompareAndSetRequest(p_name, p_value, p_compareValue));
         if (response != null) {
             return response.isSuccess();
         }
@@ -111,8 +108,8 @@ public class RaftClient {
     }
 
     public RaftData delete(String p_name) {
-        ClientResponse response = sendRequest(new DeleteRequest(p_name));
-        if (response != null) {
+        RequestResponse response = sendRequest(m_requestFactory.getDeleteRequest(p_name));
+        if (response != null && response.isSuccess()) {
             return response.getValue();
         }
 
@@ -120,25 +117,25 @@ public class RaftClient {
     }
 
     public List<RaftData> readList(String p_name) {
-        ClientResponse response = sendRequest(new ReadListRequest(p_name));
-        if (response != null) {
-            return response.getListValue();
+        RequestResponse response = sendRequest(m_requestFactory.getReadListRequest(p_name));
+        if (response != null && response.isSuccess()) {
+            return ((ListData) response.getValue()).getData();
         }
 
         return null;
     }
 
     public boolean listExists(String p_name) {
-        ClientResponse response = sendRequest(new ReadListRequest(p_name));
-        if (response != null) {
-            return response.getListValue() != null;
+        RequestResponse response = sendRequest(m_requestFactory.getReadListRequest(p_name));
+        if (response != null && response.isSuccess()) {
+            return !((ListData) response.getValue()).getData().isEmpty();
         }
 
         return false;
     }
 
     public boolean writeList(String p_name, List<RaftData> p_value, boolean p_overwrite) {
-        ClientResponse response = sendRequest(new WriteListRequest(p_name, p_value, p_overwrite));
+        RequestResponse response = sendRequest(m_requestFactory.getWriteListRequest(p_name, p_value, p_overwrite));
         if (response != null) {
             return response.isSuccess();
         }
@@ -146,8 +143,8 @@ public class RaftClient {
         return false;
     }
 
-    public boolean addToList(String p_name, RaftData p_value, boolean p_createIfNotExistent) {
-        ClientResponse response = sendRequest(new AppendToListRequest(p_name, p_value, p_createIfNotExistent));
+    public boolean addToList(String p_name, RaftData p_value) {
+        RequestResponse response = sendRequest(m_requestFactory.getAppendToListRequest(p_name, p_value));
         if (response != null) {
             return response.isSuccess();
         }
@@ -155,8 +152,8 @@ public class RaftClient {
         return false;
     }
 
-    public boolean removeFromList(String p_name, RaftData p_value, boolean p_deleteIfEmpty) {
-        ClientResponse response = sendRequest(new RemoveFromListRequest(p_name, p_value, p_deleteIfEmpty));
+    public boolean removeFromList(String p_name, RaftData p_value) {
+        RequestResponse response = sendRequest(m_requestFactory.getDeleteFromListRequest(p_name, p_value));
         if (response != null) {
             return response.isSuccess();
         }
@@ -165,16 +162,16 @@ public class RaftClient {
     }
 
     public List<RaftData> deleteList(String p_name) {
-        ClientResponse response = sendRequest(new DeleteListRequest(p_name));
-        if (response != null) {
-            return response.getListValue();
+        RequestResponse response = sendRequest(m_requestFactory.getDeleteListRequest(p_name));
+        if (response != null && response.isSuccess()) {
+            return ((ListData) response.getValue()).getData();
         }
 
         return null;
     }
 
     public boolean addServer(RaftAddress p_server) {
-        ClientResponse response = sendRequest(new AddServerRequest(p_server));
+        RequestResponse response = sendRequest(m_requestFactory.getAddServerRequest(p_server));
         if (response != null) {
             if (response.isSuccess()) {
                 m_context.getRaftServers().add(p_server);
@@ -186,7 +183,7 @@ public class RaftClient {
     }
 
     public boolean removeServer(RaftAddress p_server) {
-        ClientResponse response = sendRequest(new RemoveServerRequest(p_server));
+        RequestResponse response = sendRequest(m_requestFactory.getRemoveServerRequest(p_server));
         if (response != null) {
             if (response.isSuccess()) {
                 m_context.getRaftServers().remove(p_server);
@@ -198,18 +195,18 @@ public class RaftClient {
     }
 
     public RaftAddress getCurrentLeader() {
-        ClientResponse response = sendRequest(new ReadRequest(SpecialPaths.LEADER_PATH));
-        if (response != null && response.getValue() instanceof ServerData) {
-            return ((ServerData) response.getValue()).getServer();
+        RequestResponse response = sendRequest(m_requestFactory.getReadRequest(SpecialPaths.LEADER_PATH));
+        if (response != null && response.isSuccess()) {
+            return (RaftAddress) response.getValue();
         }
 
         return null;
     }
 
     public List<RaftAddress> getCurrentConfig() {
-        ClientResponse response = sendRequest(new ReadRequest(SpecialPaths.CLUSTER_CONFIG_PATH));
-        if (response != null && response.getValue() instanceof ClusterConfigData) {
-            return ((ClusterConfigData) response.getValue()).getServers();
+        RequestResponse response = sendRequest(m_requestFactory.getReadListRequest(SpecialPaths.CLUSTER_CONFIG_PATH));
+        if (response != null && response.isSuccess()) {
+            return ((ListData) response.getValue()).getData().stream().map(data -> (RaftAddress) data).collect(Collectors.toList());
         }
 
         return null;
@@ -219,16 +216,16 @@ public class RaftClient {
         m_networkService.close();
     }
 
-    private ClientResponse sendRequest(AbstractClientRequest p_request) {
+    private RequestResponse sendRequest(Request p_request) {
         RaftAddress serverAddress = getRandomServer();
         long startTime = System.currentTimeMillis();
         long currentTime = System.currentTimeMillis();
-        while (startTime - currentTime + OVERALL_TRY_DURATION > 0) {
+        while (startTime - currentTime + m_context.getOverallTryDuration() > 0) {
 
             LOGGER.debug("Sending request to server {}", serverAddress);
 
             p_request.setReceiverAddress(serverAddress);
-            RaftMessage response = m_networkService.sendRequest(p_request);
+            RequestResponse response = m_networkService.sendRequest(p_request);
 
             currentTime = System.currentTimeMillis();
 
@@ -238,28 +235,24 @@ public class RaftClient {
                 continue;
             }
 
-            if (response instanceof ClientResponse) {
-                LOGGER.debug("Received response");
-                return (ClientResponse) response;
-            }
+            if (response.isRedirection()) {
+                LOGGER.debug("Received redirection to server {}", response.getLeaderAddress());
 
-            if (response instanceof ClientRedirection) {
-                ClientRedirection redirection = (ClientRedirection) response;
-
-                LOGGER.debug("Received redirection to server {}", redirection.getLeaderAddress());
-
-                if (redirection.getLeaderAddress() != null) {
-                    serverAddress = redirection.getLeaderAddress();
+                if (response.getLeaderAddress() != null) {
+                    serverAddress = response.getLeaderAddress();
                 } else {
                     // cluster might be trying to elect leader
                     // wait a short time
                     try {
-                        Thread.sleep(RETRY_TIMEOUT);
+                        Thread.sleep(m_context.getRetryTimeout());
                     } catch (InterruptedException e) {
                         LOGGER.error(e);
                     }
                     serverAddress = getRandomServer();
                 }
+            } else {
+                LOGGER.debug("Received response");
+                return response;
             }
         }
 
@@ -306,9 +299,19 @@ public class RaftClient {
             addresses.add(new RaftAddress(address[0], port));
         }
 
-        ClientContext context = new ClientContext(addresses);
 
-        RaftClient client = new RaftClient(context);
+        String configPath = System.getProperty("dxraft.config");
+        if (configPath == null) {
+            configPath = CLIENT_CONFIG_PATH;
+        }
+
+        ClientConfig config = ConfigUtils.getClientConfig(configPath);
+
+        if (config == null) {
+            return;
+        }
+
+        RaftClient client = new RaftClient(config);
 
         while (true) {
             System.out.print(">> ");
@@ -368,11 +371,11 @@ public class RaftClient {
             } else if (in.startsWith("add")) {
                 String[] strings = in.split(" ");
                 if (strings.length > 3) {
-                    int id = Integer.parseInt(strings[1]);
+                    short id = Short.parseShort(strings[1]);
                     String ip = strings[2];
                     int port = Integer.parseInt(strings[3]);
                     System.out.println("Adding server with id " + id + " running at " + ip + ':' + port + "...");
-                    RaftAddress address = new RaftAddress(id, ip, port);
+                    RaftAddress address = new RaftAddress(id, ip, -1, port);
                     boolean success = client.addServer(address);
                     if (success) {
                         System.out.println("Server successfully added");
@@ -385,11 +388,11 @@ public class RaftClient {
             } else if (in.startsWith("remove")) {
                 String[] strings = in.split(" ");
                 if (strings.length > 3) {
-                    int id = Integer.parseInt(strings[1]);
+                    short id = Short.parseShort(strings[1]);
                     String ip = strings[2];
                     int port = Integer.parseInt(strings[3]);
                     System.out.println("Removing server with id " + id + " running at " + ip + ':' + port + "...");
-                    RaftAddress address = new RaftAddress(id, ip, port);
+                    RaftAddress address = new RaftAddress(id, ip, -1, port);
                     boolean success = client.removeServer(address);
                     if (success) {
                         System.out.println("Server successfully removed");

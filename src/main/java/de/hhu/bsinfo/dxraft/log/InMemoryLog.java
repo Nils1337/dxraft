@@ -1,6 +1,7 @@
 package de.hhu.bsinfo.dxraft.log;
 
-import de.hhu.bsinfo.dxraft.server.ServerContext;
+import de.hhu.bsinfo.dxraft.log.entry.LogEntry;
+import de.hhu.bsinfo.dxraft.server.ServerConfig;
 import de.hhu.bsinfo.dxraft.state.ServerState;
 import de.hhu.bsinfo.dxraft.state.StateMachine;
 
@@ -9,13 +10,15 @@ import java.util.List;
 
 public class InMemoryLog implements LogStorage {
 
-    private ServerContext m_context;
+    private ServerConfig m_context;
     private StateMachine m_stateMachine;
     private ServerState m_state;
     private List<LogEntry> m_log = new ArrayList<>();
 
-    public InMemoryLog(ServerContext p_context) {
+    public InMemoryLog(ServerConfig p_context, ServerState p_state, StateMachine p_stateMachine) {
         m_context = p_context;
+        m_state = p_state;
+        m_stateMachine = p_stateMachine;
     }
 
     @Override

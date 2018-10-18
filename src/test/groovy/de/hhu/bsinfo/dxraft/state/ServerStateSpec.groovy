@@ -1,9 +1,9 @@
 package de.hhu.bsinfo.dxraft.state
 
-import de.hhu.bsinfo.dxraft.net.RaftAddress
+import de.hhu.bsinfo.dxraft.data.RaftAddress
 
 import de.hhu.bsinfo.dxraft.log.Log
-import de.hhu.bsinfo.dxraft.server.ServerContext
+import de.hhu.bsinfo.dxraft.server.ServerConfig
 import de.hhu.bsinfo.dxraft.timer.RaftTimer
 import spock.lang.Specification
 import spock.lang.Unroll
@@ -13,13 +13,12 @@ class ServerStateSpec extends Specification {
 
     def timer = Mock(RaftTimer)
     def log = Mock(Log)
-    def context = Mock(ServerContext)
-    def state = new ServerState(context)
-    def servers = [2, 3]
+    def context = Mock(ServerConfig)
+    def state = new ServerState(context, timer)
+    def servers = [2, 3].collect {it as short}
 
     def setup() {
         context.getOtherServerIds() >> servers
-        state.setTimer(timer)
         state.setLog(log)
         state.becomeActive()
     }
@@ -102,8 +101,8 @@ class ServerStateSpec extends Specification {
             state.updateTerm(currentTerm)
             state.setState(ServerState.State.LEADER)
 
-            state.updateMatchIndex(1, index1)
-            state.updateMatchIndex(2, index2)
+            state.updateMatchIndex(1 as short, index1)
+            state.updateMatchIndex(2 as short, index2)
 
             context.getServerCount() >> 5
             log.getCommitIndex() >> -1

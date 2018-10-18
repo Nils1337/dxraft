@@ -1,5 +1,6 @@
 package de.hhu.bsinfo.dxraft.log;
 
+import de.hhu.bsinfo.dxraft.log.entry.LogEntry;
 import de.hhu.bsinfo.dxraft.state.ServerState;
 import de.hhu.bsinfo.dxraft.state.StateMachine;
 

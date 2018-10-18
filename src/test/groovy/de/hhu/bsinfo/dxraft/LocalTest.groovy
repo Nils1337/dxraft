@@ -1,11 +1,11 @@
 package de.hhu.bsinfo.dxraft
 
 import de.hhu.bsinfo.dxraft.client.RaftClient
-import de.hhu.bsinfo.dxraft.net.RaftAddress
-import de.hhu.bsinfo.dxraft.client.ClientContext
+import de.hhu.bsinfo.dxraft.data.RaftAddress
+import de.hhu.bsinfo.dxraft.client.ClientConfig
 import de.hhu.bsinfo.dxraft.data.StringData
 import de.hhu.bsinfo.dxraft.server.RaftServer
-import de.hhu.bsinfo.dxraft.server.ServerContext
+import de.hhu.bsinfo.dxraft.server.ServerConfig
 import spock.lang.Specification
 import spock.lang.Unroll
 
@@ -13,7 +13,8 @@ import spock.lang.Unroll
 class LocalTest extends Specification {
 
     def static serverCount = 3
-    def static portFrom = 5000
+    def static requestPortFrom = 5000
+    def static raftPortFrom = 5454
 
     def servers = []
     def serverAddresses = []
@@ -26,17 +27,17 @@ class LocalTest extends Specification {
     def setup() {
 
         serverCount.times {
-            serverAddresses << new RaftAddress(it, "127.0.0.1", portFrom + it)
+            serverAddresses << new RaftAddress(it as short, "127.0.0.1", raftPortFrom + it, requestPortFrom + it)
         }
 
         serverCount.times {
-            def localAddress = new RaftAddress(it, "127.0.0.1", portFrom + it)
 
-            def context = ServerContext.RaftServerContextBuilder
-                .aRaftServerContext()
-                .withLocalAddress(localAddress)
-                .withRaftServers(serverAddresses)
-                .build()
+            def context = new ServerConfig()
+            context.setLocalId(it as short)
+            context.setIp("127.0.0.1")
+            context.setRequestPort(requestPortFrom + it)
+            context.setRaftPort(raftPortFrom + it)
+            context.setServers(serverAddresses.clone())
 
             def server = RaftServer.RaftServerBuilder
                 .aRaftServer()
@@ -51,8 +52,26 @@ class LocalTest extends Specification {
             server.bootstrapNewCluster()
         }
 
-        def context = new ClientContext(serverAddresses)
+        def context = new ClientConfig()
+        context.setRaftServers(serverAddresses.clone())
         client = new RaftClient(context)
+
+        // let cluster boot and elect leader
+        sleep(200)
+    }
+
+    def "test leader election"() {
+        when:
+        sleep(500)
+        def leaderCount = 0
+        servers.each {
+            if (it.getState().isLeader()) {
+                leaderCount++
+            }
+        }
+
+        then:
+        leaderCount == 1
     }
 
     def "test normal requests"() {
@@ -70,20 +89,18 @@ class LocalTest extends Specification {
 
     def "test list requests"() {
         expect:
-        client.writeList("test", [], false)
+        client.writeList("test", [data], false)
         client.listExists("test")
-        client.readList("test") == []
-        client.deleteList("test") == []
+        client.deleteList("test")
         !client.listExists("test")
 
-        !client.addToList("test", data, false)
-        client.addToList("test", data, true)
+        client.addToList("test", data)
         client.readList("test") == [data]
-        client.addToList("test", data2, false)
+        client.addToList("test", data2)
         client.readList("test") == [data, data2]
-        client.removeFromList("test", data, false)
+        client.removeFromList("test", data)
         client.readList("test") == [data2]
-        client.removeFromList("test", data2, true)
+        client.removeFromList("test", data2)
         !client.listExists("test")
         client.readList("test") == null
     }
@@ -100,8 +117,8 @@ class LocalTest extends Specification {
 
         client.read("test") == data
 
-//        where:
-//        i << (1..10)
+        where:
+        i << (1..10)
 
     }
 
@@ -109,13 +126,14 @@ class LocalTest extends Specification {
     def "test config changes"() {
         setup:
 
-        def newAddress = new RaftAddress(3, "127.0.0.1", portFrom + 3)
+        def newAddress = new RaftAddress(3 as short, "127.0.0.1", raftPortFrom + 3, requestPortFrom + 3)
 
-        def context = ServerContext.RaftServerContextBuilder
-            .aRaftServerContext()
-            .withLocalAddress(newAddress)
-            .withRaftServers(serverAddresses)
-            .build()
+        def context = new ServerConfig()
+        context.setLocalId(3 as short)
+        context.setIp("127.0.0.1")
+        context.setRequestPort(requestPortFrom + 3)
+        context.setRaftPort(raftPortFrom + 3)
+        context.setServers(serverAddresses.clone())
 
         def newServer = RaftServer.RaftServerBuilder
             .aRaftServer()
@@ -143,8 +161,8 @@ class LocalTest extends Specification {
         cleanup:
         newServer.shutdown()
 
-//        where:
-//        i << (1..10)
+        where:
+        i << (1..10)
 
     }
 
@@ -153,7 +171,9 @@ class LocalTest extends Specification {
 
         def localAddress = new RaftAddress("127.0.0.1")
 
-        def context = new ClientContext(serverAddresses)
+        def context = new ClientConfig()
+        context.setRaftServers(serverAddresses)
+
         def client2 = new RaftClient(context)
 
         expect:

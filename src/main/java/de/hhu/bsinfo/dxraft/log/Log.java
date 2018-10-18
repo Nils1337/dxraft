@@ -1,6 +1,8 @@
 package de.hhu.bsinfo.dxraft.log;
 
-import de.hhu.bsinfo.dxraft.server.ServerContext;
+import de.hhu.bsinfo.dxraft.log.entry.LogEntry;
+import de.hhu.bsinfo.dxraft.server.ServerConfig;
+import de.hhu.bsinfo.dxraft.state.HashMapState;
 import de.hhu.bsinfo.dxraft.state.ServerState;
 import de.hhu.bsinfo.dxraft.state.StateMachine;
 
@@ -10,13 +12,16 @@ import java.util.List;
 public class Log {
 
     private int m_commitIndex = -1;
-    private ServerContext m_context;
+    private ServerConfig m_context;
     private StateMachine m_stateMachine;
     private ServerState m_state;
     private LogStorage m_logStorage;
 
-    public Log(ServerContext p_context) {
+    public Log(ServerConfig p_context, ServerState p_state) {
         m_context = p_context;
+        m_stateMachine = new HashMapState();
+        m_logStorage = new InMemoryLog(p_context, p_state, m_stateMachine);
+        m_state = p_state;
     }
 
     public void setStateMachine(StateMachine p_stateMachine) {
