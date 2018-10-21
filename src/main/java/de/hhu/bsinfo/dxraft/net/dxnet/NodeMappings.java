@@ -1,9 +1,11 @@
 package de.hhu.bsinfo.dxraft.net.dxnet;
 
 import de.hhu.bsinfo.dxnet.NodeMap;
+import de.hhu.bsinfo.dxraft.data.RaftAddress;
 import de.hhu.bsinfo.dxraft.server.ServerConfig;
 
 import java.net.InetSocketAddress;
+import java.util.ArrayList;
 import java.util.List;
 
 public class NodeMappings implements NodeMap {
@@ -16,8 +18,7 @@ public class NodeMappings implements NodeMap {
 
     @Override
     public short getOwnNodeID() {
-        // TODO reformat ids to shorts?
-        return (short) m_context.getLocalId();
+        return m_context.getLocalId();
     }
 
     @Override
@@ -27,11 +28,15 @@ public class NodeMappings implements NodeMap {
 
     @Override
     public List<Mapping> getAvailableMappings() {
-        return null;
+        List<Mapping> mappings = new ArrayList<>();
+        for (RaftAddress address: m_context.getServers()) {
+            mappings.add(new Mapping(address.getId(), address.toInetSocketAddress()));
+        }
+        return mappings;
     }
 
     @Override
     public void registerListener(Listener p_listener) {
-
+        m_context.registerListener(p_listener);
     }
 }

@@ -45,4 +45,36 @@ public class LogEntryFactory {
 
         return logEntry;
     }
+
+    public static LogEntry getLogEntryFromType(byte p_type) {
+        LogEntry logEntry;
+
+        switch (p_type) {
+            case Requests.READ_REQUEST:
+                logEntry = new ReadEntry();
+                break;
+            case Requests.READ_LIST_REQUEST:
+                logEntry = new ReadListEntry();
+                break;
+            case Requests.WRITE_REQUEST:
+                logEntry = new WriteEntry();
+                break;
+            case Requests.WRITE_LIST_REQUEST:
+                logEntry = new WriteListEntry();
+                break;
+            case Requests.DELETE_REQUEST:
+                logEntry = new DeleteEntry();
+                break;
+            case Requests.DELETE_LIST_REQUEST:
+                logEntry = new DeleteListEntry();
+                break;
+            case Requests.CONFIG_CHANGE_REQUEST:
+                logEntry = new ConfigChangeEntry();
+                break;
+            default:
+                throw new RuntimeException("Unknown Request Type");
+        }
+
+        return logEntry;
+    }
 }

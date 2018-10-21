@@ -1,5 +1,7 @@
 package de.hhu.bsinfo.dxraft.client.message;
 
+import de.hhu.bsinfo.dxraft.log.entry.LogEntry;
+
 public final class Requests {
 
     private Requests() {}

@@ -20,7 +20,7 @@ public class RaftTimer {
         if (m_timeoutFuture != null && !m_timeoutFuture.isDone()) {
             // Timer thread might already be running.
             // It can be interrupted if it's waiting for lock on the RaftServer instance
-            m_timeoutFuture.cancel(true);
+            m_timeoutFuture.cancel(false);
         }
     }
 

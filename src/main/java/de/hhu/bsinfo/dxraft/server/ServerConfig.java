@@ -1,6 +1,10 @@
 package de.hhu.bsinfo.dxraft.server;
 
 import com.google.gson.annotations.Expose;
+import de.hhu.bsinfo.dxnet.NodeMap;
+import de.hhu.bsinfo.dxnet.core.CoreConfig;
+import de.hhu.bsinfo.dxnet.ib.IBConfig;
+import de.hhu.bsinfo.dxnet.nio.NIOConfig;
 import de.hhu.bsinfo.dxraft.data.RaftAddress;
 
 import java.util.ArrayList;
@@ -62,7 +66,28 @@ public class ServerConfig {
     @Expose
     private int m_requestPort = 5000;
 
+    @Expose
+    private CoreConfig m_dxnetCoreConfig = new CoreConfig();
+
+    @Expose
+    private NIOConfig m_dxnetNioConfig = new NIOConfig();
+
+    @Expose
+    private IBConfig m_dxnetIbConfig = new IBConfig();
+
+    @Expose
+    private String m_serverMessagingService = "java-io";
+
+    @Expose
+    private String m_clientMessagingService = "java-io";
+
     private int m_pendingConfigChange = 0;
+
+    private NodeMap.Listener m_serverConfigChangeListener;
+
+    public void registerListener(NodeMap.Listener p_listener) {
+        m_serverConfigChangeListener = p_listener;
+    }
 
     public RaftAddress getRaftAddress(){
         return new RaftAddress(m_localId, m_ip, m_raftPort, m_requestPort);
@@ -78,6 +103,9 @@ public class ServerConfig {
             LOGGER.info("Started adding server {} to configuration", p_newServer.toString());
             m_pendingConfigChange = 1;
             m_servers.add(p_newServer);
+            if (m_serverConfigChangeListener != null) {
+                m_serverConfigChangeListener.nodeMappingAdded(p_newServer.getId(), p_newServer.toInetSocketAddress());
+            }
         } else {
             throw new IllegalStateException("Only one concurrent config change allowed!");
         }
@@ -88,6 +116,9 @@ public class ServerConfig {
             LOGGER.info("Cancelled adding server {} to configuration", p_newServer.toString());
             m_pendingConfigChange = 0;
             m_servers.remove(p_newServer);
+            if (m_serverConfigChangeListener != null) {
+                m_serverConfigChangeListener.nodeMappingRemoved(p_newServer.getId());
+            }
         } else {
             throw new IllegalStateException("No config change pending");
         }
@@ -120,6 +151,9 @@ public class ServerConfig {
         LOGGER.info("Finished removing server {} from configuration", p_server.toString());
         m_pendingConfigChange = 0;
         m_servers.remove(p_server);
+        if (m_serverConfigChangeListener != null) {
+            m_serverConfigChangeListener.nodeMappingRemoved(p_server.getId());
+        }
     }
 
     public Set<Short> getOtherServerIds() {

@@ -6,10 +6,14 @@ import de.hhu.bsinfo.dxraft.server.message.RequestResponse;
 import de.hhu.bsinfo.dxraft.server.message.ResponseMessageFactory;
 import de.hhu.bsinfo.dxraft.state.ServerState;
 import de.hhu.bsinfo.dxraft.state.StateMachine;
+import de.hhu.bsinfo.dxutils.serialization.Exportable;
+import de.hhu.bsinfo.dxutils.serialization.Exporter;
+import de.hhu.bsinfo.dxutils.serialization.Importable;
+import de.hhu.bsinfo.dxutils.serialization.Importer;
 
 import java.io.Serializable;
 
-public interface LogEntry extends Serializable {
+public interface LogEntry extends Serializable, Importable, Exportable {
     int getTerm();
     RequestResponse buildResponse(ResponseMessageFactory p_responseFactory);
 

@@ -7,6 +7,8 @@ import de.hhu.bsinfo.dxraft.client.message.*;
 import de.hhu.bsinfo.dxraft.log.LogEntryFactory;
 import de.hhu.bsinfo.dxraft.log.entry.ConfigChangeEntry;
 import de.hhu.bsinfo.dxraft.net.datagram.DatagramRequestNetworkService;
+import de.hhu.bsinfo.dxraft.net.dxnet.ServerDXNetNetworkService;
+import de.hhu.bsinfo.dxraft.net.dxnet.message.DXNetServerMessageFactory;
 import de.hhu.bsinfo.dxraft.server.message.*;
 import de.hhu.bsinfo.dxraft.server.net.AbstractRequestNetworkService;
 import de.hhu.bsinfo.dxraft.server.net.AbstractServerNetworkService;
@@ -53,9 +55,15 @@ public final class RaftServer implements ServerMessageReceiver, RequestReceiver,
 
     private void init() {
         if (m_networkService == null) {
-            m_networkService = new DatagramServerNetworkService(m_context);
-
+            if ("dxnet".equals(m_context.getServerMessagingService())) {
+                m_networkService = new ServerDXNetNetworkService(m_context);
+                m_serverMessageFactory = new DXNetServerMessageFactory();
+            } else {
+                m_networkService = new DatagramServerNetworkService(m_context);
+                m_serverMessageFactory = new DefaultServerMessageFactory();
+            }
         }
+
         if (m_requestNetworkService == null) {
             m_requestNetworkService = new DatagramRequestNetworkService(m_context);
         }
