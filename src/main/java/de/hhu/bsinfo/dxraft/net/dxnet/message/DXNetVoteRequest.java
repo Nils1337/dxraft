@@ -5,14 +5,14 @@ import de.hhu.bsinfo.dxnet.core.AbstractMessageImporter;
 import de.hhu.bsinfo.dxraft.data.RaftAddress;
 import de.hhu.bsinfo.dxraft.net.dxnet.RaftMessages;
 import de.hhu.bsinfo.dxraft.server.message.VoteRequest;
-import lombok.Data;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 @Getter
 @Setter
-public class DXNetVoteRequest extends DXNetServerMessage implements VoteRequest {
+@NoArgsConstructor
+public class DXNetVoteRequest extends AbstractDXNetServerMessage implements VoteRequest {
     private RaftAddress m_senderAddress;
     private RaftAddress m_receiverAddress;
     private short m_senderId;

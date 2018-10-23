@@ -6,14 +6,15 @@ import de.hhu.bsinfo.dxraft.data.RaftAddress;
 import de.hhu.bsinfo.dxraft.net.dxnet.RaftMessages;
 import de.hhu.bsinfo.dxraft.server.message.AppendEntriesResponse;
 import de.hhu.bsinfo.dxutils.serialization.ObjectSizeUtil;
-import lombok.Data;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 
 @Getter
 @Setter
-public class DXNetAppendEntriesResponse extends DXNetServerMessage implements AppendEntriesResponse {
+@NoArgsConstructor
+public class DXNetAppendEntriesResponse extends AbstractDXNetServerMessage implements AppendEntriesResponse {
     private RaftAddress m_senderAddress;
     private RaftAddress m_receiverAddress;
     private short m_senderId;

@@ -52,6 +52,8 @@ public abstract class AbstractLogEntry implements LogEntry {
         m_requestId = UUID.fromString(p_importer.readString(""));
         m_term = p_importer.readInt(m_term);
         m_clientAddress = new RaftAddress();
+        // read byte signalling data is an address
+        p_importer.readByte((byte) 0);
         p_importer.importObject(m_clientAddress);
     }
 

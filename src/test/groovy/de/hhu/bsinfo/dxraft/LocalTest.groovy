@@ -135,6 +135,7 @@ class LocalTest extends Specification {
         context.setRequestPort(requestPortFrom + 3)
         context.setRaftPort(raftPortFrom + 3)
         context.setServers(serverAddresses.clone())
+        context.setServerMessagingService("dxnet")
 
         def newServer = RaftServer.RaftServerBuilder
             .aRaftServer()

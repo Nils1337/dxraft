@@ -81,7 +81,9 @@ public class DeleteListEntry extends AbstractLogEntry {
         p_exporter.writeByte(Requests.DELETE_LIST_REQUEST);
         p_exporter.writeString(m_name);
         p_exporter.writeByte(m_mode);
-        p_exporter.exportObject(m_value);
+        if (m_mode == DELETE_ITEM_FROM_LIST_MODE) {
+            p_exporter.exportObject(m_value);
+        }
         super.exportObject(p_exporter);
     }
 
@@ -89,13 +91,23 @@ public class DeleteListEntry extends AbstractLogEntry {
     public void importObject(Importer p_importer) {
         m_name = p_importer.readString(m_name);
         m_mode = p_importer.readByte(m_mode);
-        m_value = DataTypes.fromType(p_importer.readByte((byte) 0));
-        p_importer.importObject(m_value);
+
+        if (m_mode == DELETE_ITEM_FROM_LIST_MODE) {
+            m_value = DataTypes.fromType(p_importer.readByte((byte) 0));
+            p_importer.importObject(m_value);
+        }
+
         super.importObject(p_importer);
     }
 
     @Override
     public int sizeofObject() {
-        return ObjectSizeUtil.sizeofString(m_name) + 2 * Byte.BYTES + m_value.sizeofObject() + super.sizeofObject();
+        int size = ObjectSizeUtil.sizeofString(m_name) + 2 * Byte.BYTES + super.sizeofObject();
+
+        if (m_mode == DELETE_ITEM_FROM_LIST_MODE) {
+            size += m_value.sizeofObject();
+        }
+
+        return size;
     }
 }

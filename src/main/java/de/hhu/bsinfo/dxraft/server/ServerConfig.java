@@ -1,6 +1,7 @@
 package de.hhu.bsinfo.dxraft.server;
 
 import com.google.gson.annotations.Expose;
+import de.hhu.bsinfo.dxnet.NetworkDeviceType;
 import de.hhu.bsinfo.dxnet.NodeMap;
 import de.hhu.bsinfo.dxnet.core.CoreConfig;
 import de.hhu.bsinfo.dxnet.ib.IBConfig;
@@ -12,6 +13,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import de.hhu.bsinfo.dxutils.unit.TimeUnit;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.apache.logging.log4j.LogManager;
@@ -35,21 +37,21 @@ public class ServerConfig {
 
     // timeout duration and randomization amount when following leader
     @Expose
-    private int m_followerTimeoutDuration = 100;
+    private int m_followerTimeoutDuration = 300;
 
     @Expose
-    private int m_followerRandomizationAmount = 50;
+    private int m_followerRandomizationAmount = 100;
 
     // timeout duration and randomization amount when electing
     @Expose
-    private int m_electionTimeoutDuration = 100;
+    private int m_electionTimeoutDuration = 300;
 
     @Expose
-    private int m_electionRandomizationAmount = 50;
+    private int m_electionRandomizationAmount = 100;
 
     // timeout duration and randomization amount of leader
     @Expose
-    private int m_heartbeatTimeoutDuration = 50;
+    private int m_heartbeatTimeoutDuration = 100;
 
     @Expose
     private int m_heartbeatRandomizationAmount = 0;
@@ -71,6 +73,10 @@ public class ServerConfig {
 
     @Expose
     private NIOConfig m_dxnetNioConfig = new NIOConfig();
+
+    {
+        m_dxnetNioConfig.setConnectionTimeOut(new TimeUnit(5, TimeUnit.SEC));
+    }
 
     @Expose
     private IBConfig m_dxnetIbConfig = new IBConfig();
@@ -158,7 +164,7 @@ public class ServerConfig {
 
     public Set<Short> getOtherServerIds() {
         return m_servers.stream()
-            .filter(address -> !address.equals(getRaftAddress()))
+            .filter(address -> address.getId() != m_localId)
             .map(RaftAddress::getId).collect(Collectors.toSet());
     }
 
@@ -168,7 +174,7 @@ public class ServerConfig {
     }
 
     public boolean singleServerCluster() {
-        return m_servers.stream().allMatch(address -> address.equals(getRaftAddress()));
+        return m_servers.stream().allMatch(address -> address.getId() == m_localId);
     }
 
     public short getLocalId() {

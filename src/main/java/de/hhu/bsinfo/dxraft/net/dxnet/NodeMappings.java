@@ -23,7 +23,12 @@ public class NodeMappings implements NodeMap {
 
     @Override
     public InetSocketAddress getAddress(short p_nodeID) {
-        return m_context.getAddressById(p_nodeID).toInetSocketAddress();
+        RaftAddress addr = m_context.getAddressById(p_nodeID);
+        if (addr != null) {
+            return addr.toInetSocketAddress();
+        }
+
+        return null;
     }
 
     @Override

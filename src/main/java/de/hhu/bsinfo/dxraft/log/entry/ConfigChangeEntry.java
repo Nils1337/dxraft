@@ -99,6 +99,8 @@ public class ConfigChangeEntry extends AbstractLogEntry {
     public void importObject(Importer p_importer) {
         m_mode = p_importer.readByte(m_mode);
         m_serverAddress = new RaftAddress();
+        // read byte signalling data is an address
+        p_importer.readByte((byte) 0);
         p_importer.importObject(m_serverAddress);
         super.importObject(p_importer);
     }

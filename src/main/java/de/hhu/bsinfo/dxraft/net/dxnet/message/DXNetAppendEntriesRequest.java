@@ -7,8 +7,8 @@ import de.hhu.bsinfo.dxraft.log.LogEntryFactory;
 import de.hhu.bsinfo.dxraft.log.entry.LogEntry;
 import de.hhu.bsinfo.dxraft.net.dxnet.RaftMessages;
 import de.hhu.bsinfo.dxraft.server.message.AppendEntriesRequest;
-import lombok.Data;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.util.ArrayList;
@@ -16,7 +16,8 @@ import java.util.List;
 
 @Getter
 @Setter
-public class DXNetAppendEntriesRequest extends DXNetServerMessage implements AppendEntriesRequest {
+@NoArgsConstructor
+public class DXNetAppendEntriesRequest extends AbstractDXNetServerMessage implements AppendEntriesRequest {
 
     public DXNetAppendEntriesRequest(short p_receiverId, int p_term, int p_prevLogIndex, int p_prevLogTerm,
                                        int p_leaderCommitIndex, List<LogEntry> p_entries) {
@@ -46,10 +47,12 @@ public class DXNetAppendEntriesRequest extends DXNetServerMessage implements App
         p_exporter.writeInt(m_prevLogIndex);
         p_exporter.writeInt(m_prevLogTerm);
         p_exporter.writeInt(m_leaderCommitIndex);
-        p_exporter.writeInt(m_entries.size());
+        p_exporter.writeInt(m_entries == null ? 0 : m_entries.size());
 
-        for (LogEntry logEntry: m_entries) {
-            p_exporter.exportObject(logEntry);
+        if (m_entries != null) {
+            for (LogEntry logEntry : m_entries) {
+                p_exporter.exportObject(logEntry);
+            }
         }
     }
 
@@ -67,6 +70,7 @@ public class DXNetAppendEntriesRequest extends DXNetServerMessage implements App
 
         for (int i = 0; i < entries; i++) {
             LogEntry entry = LogEntryFactory.getLogEntryFromType(p_importer.readByte((byte) 0));
+            p_importer.importObject(entry);
             m_entries.add(entry);
         }
 
@@ -75,8 +79,10 @@ public class DXNetAppendEntriesRequest extends DXNetServerMessage implements App
     @Override
     protected int getPayloadLength() {
         int size = Short.BYTES + 5 * Integer.BYTES;
-        for (LogEntry entry: m_entries) {
-            size += entry.sizeofObject();
+        if (m_entries != null) {
+            for (LogEntry entry : m_entries) {
+                size += entry.sizeofObject();
+            }
         }
         return size;
     }
